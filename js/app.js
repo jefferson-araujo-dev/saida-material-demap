@@ -1,13 +1,4 @@
-import { auth, db } from "./firebase.js";
-import {
-  onAuthStateChanged,
-  signInWithCustomToken,
-  signInWithEmailAndPassword,
-  signInAnonymously,
-  signOut,
-  updateProfile,
-  sendPasswordResetEmail,
-} from "firebase/auth";
+import { auth } from "./firebase.js";
 import {
   svgIcon,
   setGreeting,
@@ -33,36 +24,74 @@ import {
 } from "./database.js";
 
 import {
+  signInAnonymously,
+  signInWithCustomToken,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  updateProfile,
+  sendPasswordResetEmail,
+} from "firebase/auth";
+import {
+  Chart,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import * as XLSX from "xlsx";
+import {
   normalizarData,
   normalizarLancamentoImportado,
   normalizarTexto,
 } from "./normalizacao.mjs";
-import {
-  abrirModal,
-  debounce,
-  escapeHTML,
-  fecharModal,
-  formatarDataParaDisplay,
-  validarArquivoImportacao,
-} from "./utils.js";
-import { initAuth } from "./auth.js";
-import { atualizarDashboard, renderizarGraficos } from "./dashboard.js";
-import {
-  exportarLancamentosCsv,
-  importarBasePlanilha,
-  importarHistoricoPlanilha,
-} from "./import-export.js";
-import { renderizarGridLancamentos } from "./lancamentos.js";
+
+Chart.register(
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+);
 
 // ==========================================
 // 0. ESTADO GLOBAL E UTILITÁRIOS DE INTERFACE
 // ==========================================
+let chartEnc = null;
+let chartMat = null;
 let acaoPendenteModal = null;
 let pendingChartData = null;
 let isLoadingDashboard = true;
 let isLoadingTabela = true;
 let dadosCarregadosToastMostrado = false;
 let colunasExportacaoSelecionadas = [];
+
+// ==========================================
+// UTILITÁRIOS DE SEGURANÇA
+// ==========================================
+const escapeHTML = (str) => {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+// ==========================================
+// UTILITÁRIOS DE DESEMPENHO
+// ==========================================
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 // ==========================================
 // CACHE DE DOM E AUXILIARES DE DESEMPENHO
@@ -103,6 +132,39 @@ const carregarColunasExportacao = () => {
   }
 };
 
+const formatarDataParaDisplay = (valor) => {
+  if (!valor) return "";
+  const texto = String(valor);
+  return texto.includes("-") ? texto.split("-").reverse().join("/") : texto;
+};
+
+const atualizarTextoSeExiste = (id, valor) => {
+  const el = document.getElementById(id);
+  if (el) el.textContent = valor;
+};
+
+const abrirModal = (modalId, contentId, callback) => {
+  const modal = document.getElementById(modalId);
+  const content = document.getElementById(contentId);
+  if (!modal || !content) return;
+
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    modal.classList.remove("opacity-0");
+    content.classList.remove("scale-95");
+    if (typeof callback === "function") callback();
+  });
+};
+
+const fecharModal = (modalId, contentId) => {
+  const modal = document.getElementById(modalId);
+  const content = document.getElementById(contentId);
+  if (!modal || !content) return;
+  modal.classList.add("opacity-0");
+  content.classList.add("scale-95");
+  setTimeout(() => modal.classList.add("hidden"), 300);
+};
+
 carregarColunasExportacao();
 
 const obterMensagemErroFirebase = (
@@ -133,7 +195,7 @@ const obterMensagemErroFirebase = (
   return fallback;
 };
 
-export const mostrarErroFirebase = (
+const mostrarErroFirebase = (
   error,
   fallback = "Não foi possível concluir a operação.",
 ) => {
@@ -329,7 +391,7 @@ document.addEventListener("click", (e) => {
       limparFiltros();
       break;
     case "mudar-pagina":
-      onMudarPagina(parseInt(actionEl.getAttribute("data-dir")));
+      mudarPagina(parseInt(actionEl.getAttribute("data-dir")));
       break;
     case "show-toast":
       showToast(
@@ -549,7 +611,7 @@ const enviarEmailTrocaSenha = async () => {
     await sendPasswordResetEmail(auth, currentUser.email);
     showToast("Link de redefinição enviado para o seu e-mail!", "success");
   } catch (error) {
-    mostrarErroFirebase(error, "Erro ao processar solicitação.");
+    showToast("Erro ao processar solicitação de troca de senha.", "error");
   } finally {
     btn.innerHTML = originalText;
     btn.disabled = false;
@@ -581,7 +643,7 @@ const salvarConfiguracoes = () => {
   );
   showToast("Configurações salvas!", "success");
   fecharModalConfiguracoes();
-  paginaAtual = 1; // Reseta para a primeira página
+  paginaAtual = 1;
   if (dadosFiltrados.length > 0) renderizarGridLancamentos();
 };
 
@@ -685,9 +747,7 @@ const confirmarModalPrompt = async () => {
       // Salvar na nuvem (Firestore)
       try {
         await salvarEncarregadoNoFirestore(novoNome);
-      } catch (error) {
-        mostrarErroFirebase(error, "Falha ao salvar encarregado na nuvem.");
-      }
+      } catch (e) {}
     } else {
       showToast("Este encarregado já existe.", "error");
     }
@@ -721,7 +781,7 @@ const removerEncarregadoSelecionado = () => {
           "success",
         );
       } catch (error) {
-        mostrarErroFirebase(error, "Erro ao remover encarregado.");
+        showToast("Erro ao remover encarregado.", "error");
       }
     },
     "Excluir",
@@ -817,18 +877,16 @@ document
     }
     const file = e.target.files[0];
     if (!file) return;
-    const validacao = validarArquivoImportacao(file);
-    if (!validacao.ok) {
-      showToast(validacao.message, "error");
-      e.target.value = "";
-      return;
-    }
     showToast("Sincronizando base...", "info");
     const reader = new FileReader();
     reader.onload = function (event) {
       try {
-        const text = new TextDecoder("utf-8").decode(event.target.result);
-        const rows = parseCsv(text);
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const rows = XLSX.utils.sheet_to_json(
+          workbook.Sheets[workbook.SheetNames[0]],
+          { header: 1 },
+        );
         let newBase = {};
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
@@ -855,7 +913,7 @@ document
               const count = await salvarBaseNoFirestoreLote(baseDados);
               showToast(`Base salva na nuvem com ${count} itens.`, "success");
             } catch (e) {
-              mostrarErroFirebase(e, "Erro ao sincronizar com a nuvem.");
+              showToast("Erro ao sincronizar com a nuvem.", "error");
             }
           })();
         } else {
@@ -863,8 +921,6 @@ document
         }
       } catch (error) {
         showToast("Erro ao ler Excel.", "error");
-      } finally {
-        e.target.value = "";
       }
     };
     reader.readAsArrayBuffer(file);
@@ -930,6 +986,12 @@ if (savedConfig) {
 }
 
 try {
+  const initAuth = async () => {
+    if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+      await signInWithCustomToken(auth, __initial_auth_token);
+    }
+  };
+  initAuth();
   onAuthStateChanged(auth, (user) => {
     if (user) {
       currentUser = user;
@@ -1013,19 +1075,8 @@ try {
     }
   });
 } catch (error) {
-  console.error("Erro crítico na inicialização do Firebase Auth:", error);
-  mostrarErroFirebase(
-    error,
-    "Falha crítica ao iniciar a autenticação com a nuvem.",
-  );
+  mostrarErroFirebase(error, "Falha de conexão com a nuvem.");
 }
-
-// Inicialização assíncrona para tokens customizados (se aplicável)
-const initCustomAuth = async () => {
-  if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
-    await signInWithCustomToken(auth, __initial_auth_token);
-  }
-};
 
 // Lógica do formulário de acesso
 document.getElementById("form-login").addEventListener("submit", async (e) => {
@@ -1069,24 +1120,18 @@ document
   .addEventListener("change", async function (e) {
     const file = e.target.files[0];
     if (!file || !currentUser) return;
-    const validacao = validarArquivoImportacao(file);
-    if (!validacao.ok) {
-      showToast(validacao.message, "error");
-      e.target.value = "";
-      return;
-    }
     showToast("Processando histórico...", "info");
     const reader = new FileReader();
     reader.onload = async function (event) {
       try {
-        const text = new TextDecoder("utf-8").decode(event.target.result);
-        const rows = parseCsv(text);
-        const headers = rows[0] || [];
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const rows = XLSX.utils.sheet_to_json(
+          workbook.Sheets[workbook.SheetNames[0]],
+          { raw: false },
+        );
         const lancamentosFormatados = [];
-        for (let i = 1; i < rows.length; i += 1) {
-          const row = Object.fromEntries(
-            headers.map((header, index) => [header, rows[i][index] ?? ""]),
-          );
+        for (let row of rows) {
           const lancamento = normalizarLancamentoImportado(row);
           if (
             lancamento.codigo &&
@@ -1184,7 +1229,7 @@ document
       );
     } catch (error) {
       console.error(error);
-      mostrarErroFirebase(error, "Erro ao registrar a saída.");
+      showToast("Erro no servidor. Tente novamente em instantes.", "error");
     } finally {
       btn.innerHTML = original;
       btn.disabled = false;
@@ -1238,12 +1283,7 @@ function iniciarEscutaDeDados() {
     isLoadingDashboard = false;
     esconderSkeletonDashboard();
     aplicarFiltroPesquisa();
-    atualizarDashboard({
-      dadosAtuais,
-      isLoadingDashboard,
-      renderizarSkeletonDashboard,
-      esconderSkeletonDashboard,
-    });
+    atualizarDashboard();
     if (!dadosCarregadosToastMostrado) {
       dadosCarregadosToastMostrado = true;
       showToast("Dados carregados.", "success");
@@ -1363,7 +1403,7 @@ ordenacaoSelect.addEventListener("change", () => {
 
   salvarFiltros();
   aplicarOrdenacao();
-  renderizarGrid();
+  renderizarGridLancamentos();
 });
 
 const parseDataFiltro = (valor) => {
@@ -1432,7 +1472,7 @@ function aplicarFiltroPesquisa() {
   });
   dadosFiltrados = Object.values(agrupados);
   aplicarOrdenacao();
-  renderizarGrid();
+  renderizarGridLancamentos();
 }
 
 function aplicarOrdenacao() {
@@ -1452,25 +1492,101 @@ function aplicarOrdenacao() {
   });
 }
 
-function renderizarGrid() {
-  const novaPagina = renderizarGridLancamentos(DOM, {
-    dadosFiltrados,
-    paginaAtual,
-    itensPorPagina,
-    isLoading: isLoadingTabela,
-    isAdmin,
-    renderizarSkeleton: renderizarSkeletonTabela,
-  });
-  if (novaPagina !== paginaAtual) {
-    paginaAtual = novaPagina;
+function renderizarGridLancamentos() {
+  if (isLoadingTabela) {
+    renderizarSkeletonTabela();
+    return;
   }
+
+  DOM.grid.innerHTML = "";
+  const total = dadosFiltrados.length;
+  const paginas = Math.ceil(total / itensPorPagina) || 1;
+
+  if (total === 0) {
+    DOM.grid.innerHTML = `<div class="col-span-1 md:col-span-2 xl:col-span-3 flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-slate-200 border-dashed">
+                    <div class="bg-slate-50 p-5 rounded-full mb-4 ring-8 ring-slate-50/50 opacity-50">${svgIcon("folder", "w-10 h-10")}</div>
+                    <h4 class="font-extrabold text-lg text-slate-700">Nenhum registro encontrado</h4>
+                    <p class="text-sm mt-1">Altere os filtros de pesquisa ou adicione um novo lançamento.</p>
+                </div>`;
+    DOM.tabInfo.textContent = "0 registros";
+    DOM.btnPrev.disabled = true;
+    DOM.btnNext.disabled = true;
+    return;
+  }
+
+  if (paginaAtual > paginas) paginaAtual = paginas;
+  if (paginaAtual < 1) paginaAtual = 1;
+  const start = (paginaAtual - 1) * itensPorPagina;
+  const end = Math.min(start + itensPorPagina, total);
+
+  let itensHTML = "";
+  dadosFiltrados.slice(start, end).forEach((item) => {
+    const dataBR = formatarDataParaDisplay(item.data);
+    const idArg = item.isGrouped
+      ? `[${item.ids.map((id) => `'${id}'`).join(",")}]`
+      : `'${item.id}'`;
+    const baixaAtual = item.baixa || "Não";
+    const borderColor =
+      baixaAtual === "Sim" ? "border-t-emerald-500" : "border-t-amber-500";
+
+    const materialSeguro = escapeHTML(item.material);
+    const encarregadoSeguro = escapeHTML(item.encarregado);
+
+    const btnBaixa =
+      baixaAtual === "Sim"
+        ? `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Sim" class="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("checkDouble", "w-4 h-4")} Concluído</button>`
+        : `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Não" class="flex-1 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("clock", "w-4 h-4")} Pendente</button>`;
+
+    itensHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 border-t-4 ${borderColor} p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-slate-100/80 px-2.5 py-1 rounded-md text-[10px] font-bold text-slate-500 tracking-widest border border-slate-200">
+                                CÓD: ${escapeHTML(item.codigo)}
+                            </div>
+                            <div class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[10px] font-bold flex items-center gap-1">
+                                ${svgIcon("calendar", "w-4 h-4")} ${dataBR}
+                            </div>
+                        </div>
+                        <h3 class="font-black text-slate-800 text-base leading-tight line-clamp-2 mb-4" title="${materialSeguro}">${materialSeguro}</h3>
+                        
+                        <div class="flex items-center gap-3 sm:gap-4 bg-slate-50/50 rounded-xl p-3 border border-slate-100 mb-4">
+                            <svg class="text-brand-500 text-sm mr-2" aria-hidden="true"><use href="#icon-users-gear"></use></svg>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase">Responsável</p>
+                                <p class="font-bold text-slate-700 text-sm truncate" title="${encarregadoSeguro}">${encarregadoSeguro}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase">Qtd</p>
+                                <p class="font-black text-brand-600 text-lg leading-none">${item.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto flex gap-2 pt-2 border-t border-slate-100">
+                            ${btnBaixa}
+                            ${
+                              item.isGrouped
+                                ? `<div class="w-16 flex-shrink-0 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">${svgIcon("layer", "w-4 h-4")} ${item.ids.length}x</div>`
+                                : isAdmin
+                                  ? `<button data-action="deletar-lancamento" data-id="${item.id}" class="w-16 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Excluir Registro">${svgIcon("trash", "w-4 h-4")}</button>`
+                                  : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para excluir">${svgIcon("trash", "w-4 h-4")}</div>`
+                            }
+                        </div>
+                    </div>`;
+  });
+  DOM.grid.innerHTML = itensHTML;
+
+  document.getElementById("tabela-info").textContent =
+    `Pág. ${paginaAtual} de ${paginas} (${total} itens)`;
+  document.getElementById("tabela-paginacao-info").textContent =
+    `${paginaAtual} / ${paginas}`;
+  document.getElementById("btn-prev-page").disabled = paginaAtual === 1;
+  document.getElementById("btn-next-page").disabled = paginaAtual === paginas;
 }
 
-const onMudarPagina = (direcao) => {
-  paginaAtual += direcao;
-  renderizarGrid();
+const mudarPagina = (dir) => {
+  paginaAtual += dir;
+  renderizarGridLancamentos();
 };
-
 const exportarExcel = (colunasSelecionadas = colunasExportacaoSelecionadas) => {
   if (!dadosFiltrados.length)
     return showToast("Sem dados para exportar.", "info");
@@ -1502,37 +1618,107 @@ const exportarExcel = (colunasSelecionadas = colunasExportacaoSelecionadas) => {
     });
     return linha;
   });
-  const headers = Object.keys(data[0] || {}).map((key) => key);
-  const rows = [
-    headers,
-    ...data.map((item) => headers.map((key) => item[key] ?? "")),
-  ];
-  const csv = serializeCsv(rows);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `DEMAP_Lançamentos_${new Date().toISOString().split("T")[0]}${filtrosResumo.length ? "_filtrado" : ""}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.json_to_sheet(data);
+  const colWidths = {
+    Data: 12,
+    Código: 15,
+    Material: 50,
+    Quantidade: 12,
+    Encarregado: 25,
+    Baixa: 10,
+  };
+  ws["!cols"] = Object.keys(data[0] || {}).map((key) => ({
+    wch: colWidths[key] || 20,
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Lançamentos");
+  const nomeArquivo = `DEMAP_Lançamentos_${new Date().toISOString().split("T")[0]}${filtrosResumo.length ? "_filtrado" : ""}.xlsx`;
+  XLSX.writeFile(wb, nomeArquivo);
   showToast("Relatório baixado com sucesso!", "success");
 };
 
 // ==========================================
 // 5. GRÁFICOS E PAINEL
 // ==========================================
-function atualizarDashboardLocal() {
-  atualizarDashboard({
-    dadosAtuais,
-    isLoadingDashboard,
-    renderizarSkeletonDashboard,
-    esconderSkeletonDashboard,
+function atualizarDashboard() {
+  if (isLoadingDashboard) {
+    renderizarSkeletonDashboard();
+    return;
+  }
+  esconderSkeletonDashboard();
+
+  let total = 0;
+  let encSet = new Set();
+  let matSet = new Set();
+  let volEnc = {};
+  let topMat = {};
+  const hoje = new Date();
+  const inicio7 = new Date(hoje);
+  inicio7.setDate(hoje.getDate() - 7);
+  const inicio30 = new Date(hoje);
+  inicio30.setDate(hoje.getDate() - 30);
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  let resumo7d = 0;
+  let resumo30d = 0;
+  let resumoMes = 0;
+  dadosAtuais.forEach((i) => {
+    total += Number(i.quantidade);
+    encSet.add(i.encarregado);
+    matSet.add(i.codigo);
+    volEnc[i.encarregado] = (volEnc[i.encarregado] || 0) + Number(i.quantidade);
+    let matDesc = i.material.substring(0, 30) + "...";
+    topMat[matDesc] = (topMat[matDesc] || 0) + Number(i.quantidade);
+
+    const dataItem = parseDataFiltro(i.data);
+    if (dataItem) {
+      if (dataItem >= inicio7) resumo7d += Number(i.quantidade);
+      if (dataItem >= inicio30) resumo30d += Number(i.quantidade);
+      if (dataItem >= inicioMes) resumoMes += Number(i.quantidade);
+    }
   });
+  atualizarTextoSeExiste(
+    "card-total-saidas",
+    total.toLocaleString("pt-BR", { maximumFractionDigits: 2 }),
+  );
+  atualizarTextoSeExiste("card-total-encarregados", encSet.size);
+  atualizarTextoSeExiste("card-total-materiais", matSet.size);
+  atualizarTextoSeExiste(
+    "resumo-7d",
+    `${resumo7d.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
+  );
+  atualizarTextoSeExiste(
+    "resumo-30d",
+    `${resumo30d.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
+  );
+  atualizarTextoSeExiste(
+    "resumo-mes",
+    `${resumoMes.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
+  );
+
+  let aEnc = Object.keys(volEnc)
+    .map((k) => ({ nome: k, vol: volEnc[k] }))
+    .sort((a, b) => b.vol - a.vol)
+    .slice(0, 10);
+  let aMat = Object.keys(topMat)
+    .map((k) => ({ nome: k, vol: topMat[k] }))
+    .sort((a, b) => b.vol - a.vol)
+    .slice(0, 5);
+
+  const emptyEnc = document.getElementById("empty-chart-enc");
+  if (emptyEnc) emptyEnc.classList.toggle("hidden", aEnc.length > 0);
+  const emptyMat = document.getElementById("empty-chart-mat");
+  if (emptyMat) emptyMat.classList.toggle("hidden", aMat.length > 0);
+
+  const tabDashboard = document.getElementById("tab-dashboard");
+  if (tabDashboard?.classList.contains("active")) {
+    renderizarGraficos(aEnc, aMat);
+    pendingChartData = null;
+  } else {
+    pendingChartData = { aEnc, aMat };
+  }
 }
 
-function renderizarGraficosLocal(dEnc, dMat) {
+function renderizarGraficos(dEnc, dMat) {
   Chart.defaults.font.family = "'Inter', sans-serif";
   const canvasEnc = document.getElementById("chartEncarregados");
   const canvasMat = document.getElementById("chartMateriais");
