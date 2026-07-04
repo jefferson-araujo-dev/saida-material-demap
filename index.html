@@ -1,0 +1,2183 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Gestão de Materiais | COENG</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon.svg" />
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Fonte Inter (Padrão Profissional) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/output.css" />
+    <style>
+      #btn-remover-encarregado:hover {
+        background-color: #f87171 !important; /* Equivalente ao red-400 do Tailwind */
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 font-sans flex h-screen overflow-hidden text-slate-800 antialiased selection:bg-brand-200 selection:text-brand-900"
+  >
+    <svg
+      aria-hidden="true"
+      style="position: absolute; width: 0; height: 0; overflow: hidden"
+    >
+      <symbol id="icon-bars" viewBox="0 0 24 24">
+        <path
+          d="M4 12h16M4 6h16M4 18h16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-layer" viewBox="0 0 24 24">
+        <polygon
+          points="12 2 2 7 12 12 22 7 12 2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <polyline
+          points="2 17 12 22 22 17"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <polyline
+          points="2 12 12 17 22 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-coeng" viewBox="28 30 168 168">
+        <g
+          transform="translate(0,225) scale(0.1,-0.1)"
+          fill="currentColor"
+          stroke="none"
+        >
+          <path
+            d="M963 1646 c-170 -42 -336 -189 -388 -346 -15 -45 -19 -49 -63 -60 -169 -42 -285 -221 -253 -392 22 -120 90 -209 201 -262 l65 -31 527 -3 c581 -3 610 -1 713 58 71 41 140 117 178 198 30 63 32 74 32 177 0 103 -2 114 -32 178 -63 132 -181 224 -320 248 -59 10 -67 15 -135 84 -80 79 -178 134 -276 154 -69 14 -183 13 -249 -3z m274 -136 c86 -30 161 -90 229 -185 18 -26 28 -29 96 -36 91 -9 159 -40 212 -99 134 -149 94 -376 -85 -475 l-54 -30 -530 -3 c-369 -2 -542 0 -568 8 -49 14 -115 74 -138 125 -60 132 28 286 176 310 86 14 84 12 101 73 25 89 72 168 131 222 120 110 277 143 430 90z"
+          />
+          <path
+            d="M947 1346 l-137 -73 132 -69 c72 -38 137 -70 144 -72 7 -2 75 29 150 69 l136 72 -64 34 c-76 41 -216 113 -220 113 -2 0 -65 -33 -141 -74z"
+          />
+          <path
+            d="M780 1058 l0 -163 135 -72 c74 -40 137 -73 140 -73 2 0 5 72 7 160 l3 160 -60 31 c-33 18 -97 52 -142 76 l-83 45 0 -164z"
+          />
+          <path
+            d="M1268 1147 l-138 -72 0 -162 c0 -90 2 -163 4 -163 3 0 66 32 140 71 l136 72 0 163 c0 90 -1 164 -2 163 -2 0 -65 -33 -140 -72z"
+          />
+        </g>
+      </symbol>
+      <symbol id="icon-xmark" viewBox="0 0 24 24">
+        <path
+          d="M18 6 6 18M6 6l12 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-chart-pie" viewBox="0 0 24 24">
+        <path
+          d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-clipboard-list" viewBox="0 0 24 24">
+        <rect
+          width="8"
+          height="4"
+          x="8"
+          y="2"
+          rx="1"
+          ry="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-database" viewBox="0 0 24 24">
+        <ellipse
+          cx="12"
+          cy="5"
+          rx="9"
+          ry="3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M3 5V19A9 3 0 0 0 21 19V5M3 12A9 3 0 0 0 21 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-file-import" viewBox="0 0 24 24">
+        <path
+          d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M14 2v4a2 2 0 0 0 2 2h4M12 18v-6M9 15l3 3 3-3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-boxes-packing" viewBox="0 0 24 24">
+        <line
+          x1="16.5"
+          y1="9.4"
+          x2="7.5"
+          y2="4.21"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <polyline
+          points="3.27 6.96 12 12.01 20.73 6.96"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="12"
+          y1="22.08"
+          x2="12"
+          y2="12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-users-gear" viewBox="0 0 24 24">
+        <path
+          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="9"
+          cy="7"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-chart-column" viewBox="0 0 24 24">
+        <path
+          d="M3 3v18h18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          width="4"
+          height="7"
+          x="7"
+          y="14"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          width="4"
+          height="12"
+          x="15"
+          y="9"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-chart-bar" viewBox="0 0 24 24">
+        <line
+          x1="18"
+          x2="18"
+          y1="20"
+          y2="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="12"
+          x2="12"
+          y1="20"
+          y2="4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="6"
+          x2="6"
+          y1="20"
+          y2="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path
+          d="M5 12h14M12 5v14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24">
+        <polyline
+          points="20 6 9 17 4 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-table-cells-large" viewBox="0 0 24 24">
+        <rect
+          width="7"
+          height="7"
+          x="3"
+          y="3"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          width="7"
+          height="7"
+          x="14"
+          y="3"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          width="7"
+          height="7"
+          x="14"
+          y="14"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          width="7"
+          height="7"
+          x="3"
+          y="14"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-user-tie" viewBox="0 0 24 24">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="12"
+          cy="7"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-clipboard-check" viewBox="0 0 24 24">
+        <rect
+          width="8"
+          height="4"
+          x="8"
+          y="2"
+          rx="1"
+          ry="1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 14l2 2 4-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-arrow-down-a-z" viewBox="0 0 24 24">
+        <path
+          d="m3 16 4 4 4-4M7 20V4M20 8h-5M15 10V6.5a2.5 2.5 0 0 1 5 0V10M15 14h5l-5 6h5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-magnifying-glass" viewBox="0 0 24 24">
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="m21 21-4.3-4.3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-file-excel" viewBox="0 0 24 24">
+        <path
+          d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M14 2v4a2 2 0 0 0 2 2h4M9.5 11.5 14.5 17.5M14.5 11.5 9.5 17.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-chevron-left" viewBox="0 0 24 24">
+        <path
+          d="m15 18-6-6 6-6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+        <path
+          d="m9 18 6-6-6-6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-triangle-exclamation" viewBox="0 0 24 24">
+        <path
+          d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3ZM12 9v4M12 17h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-user-plus" viewBox="0 0 24 24">
+        <path
+          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="9"
+          cy="7"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="19"
+          x2="19"
+          y1="8"
+          y2="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="22"
+          x2="16"
+          y1="11"
+          y2="11"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-info" viewBox="0 0 24 24">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M12 16v-4M12 8h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-check-double" viewBox="0 0 24 24">
+        <path
+          d="M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <polyline
+          points="12 6 12 12 16 14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-calendar" viewBox="0 0 24 24">
+        <rect
+          width="18"
+          height="18"
+          x="3"
+          y="4"
+          rx="2"
+          ry="2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="16"
+          x2="16"
+          y1="2"
+          y2="6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="8"
+          x2="8"
+          y1="2"
+          y2="6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="3"
+          x2="21"
+          y1="10"
+          y2="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-folder-open" viewBox="0 0 24 24">
+        <path
+          d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-trash-can" viewBox="0 0 24 24">
+        <path
+          d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-spinner" viewBox="0 0 24 24">
+        <path
+          d="M21 12a9 9 0 1 1-6.219-8.56"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-logout" viewBox="0 0 24 24">
+        <path
+          d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-bell" viewBox="0 0 24 24">
+        <path
+          d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-gear" viewBox="0 0 24 24">
+        <path
+          d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 24 24">
+        <rect
+          width="18"
+          height="11"
+          x="3"
+          y="11"
+          rx="2"
+          ry="2"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M7 11V7a5 5 0 0 1 10 0v4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-eye" viewBox="0 0 24 24">
+        <path
+          d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="icon-eye-slash" viewBox="0 0 24 24">
+        <path
+          d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+    </svg>
+
+    <!-- Tela de acesso -->
+    <div
+      id="login-screen"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-50 transition-opacity duration-500"
+    >
+      <div
+        class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.15),transparent_40%)] pointer-events-none"
+      ></div>
+      <div
+        class="glass-card panel-card w-full max-w-md p-8 sm:p-10 relative z-10 mx-4 transform transition-all shadow-2xl"
+      >
+        <div class="text-center mb-8">
+          <div
+            class="bg-brand-600 p-3 rounded-2xl text-white shadow-xl shadow-brand-600/30 inline-flex items-center justify-center w-14 h-14 mb-4"
+          >
+            <svg class="w-8 h-8" aria-hidden="true">
+              <use href="#icon-coeng"></use>
+            </svg>
+          </div>
+          <h2 class="text-2xl font-black text-slate-800 tracking-tight">
+            Gestão de Materiais
+          </h2>
+          <p
+            class="text-xs text-brand-600 font-bold uppercase tracking-[0.2em] mt-1"
+          >
+            COENG
+          </p>
+        </div>
+        <form id="form-login" class="space-y-5" autocomplete="off">
+          <div>
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >E-mail Corporativo</label
+            >
+            <input
+              type="email"
+              id="login-email"
+              required
+              autocomplete="off"
+              class="field-input ui-field w-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 bg-slate-50/50 hover:bg-white text-sm"
+              placeholder="acesso@demap.com"
+            />
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label
+                class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
+                >Senha</label
+              >
+              <a
+                href="#"
+                data-action="show-toast"
+                data-message="Contate o administrador para redefinir a senha."
+                data-type="info"
+                class="text-[10px] sm:text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors"
+                >Esqueceu?</a
+              >
+            </div>
+            <div class="relative">
+              <input
+                type="password"
+                id="login-password"
+                required
+                autocomplete="new-password"
+                class="field-input ui-field w-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 bg-slate-50/50 hover:bg-white text-sm pr-10"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                data-action="toggle-password"
+                class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-brand-600 focus:outline-none transition-colors"
+                aria-label="Mostrar/Ocultar senha"
+              >
+                <svg class="w-4 h-4" aria-hidden="true">
+                  <use id="icon-password-toggle" href="#icon-eye"></use>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button
+            type="submit"
+            id="btn-login"
+            class="btn-base btn-primary w-full text-sm mt-4 shadow-lg shadow-brand-500/30 py-3 h-auto"
+          >
+            Acessar Sistema
+          </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center space-y-4">
+          <button
+            type="button"
+            id="btn-login-anonimo"
+            data-action="login-anonimo"
+            class="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-1.5 w-full"
+          >
+            <svg class="w-3.5 h-3.5" aria-hidden="true">
+              <use href="#icon-user-tie"></use>
+            </svg>
+            Entrar como Visitante
+          </button>
+          <p class="text-[10px] font-medium text-slate-400">
+            Protegido por criptografia de ponta a ponta.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipiente de avisos -->
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Modais -->
+    <div
+      id="modal-confirmacao"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-confirmacao-content"
+      >
+        <div class="flex items-center gap-4 mb-4">
+          <div class="bg-red-50 text-red-600 p-3.5 rounded-full flex-shrink-0">
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-triangle-exclamation"></use>
+            </svg>
+          </div>
+          <div>
+            <h3 id="modal-titulo" class="text-lg font-bold text-slate-800">
+              Confirmar Ação
+            </h3>
+            <p id="modal-mensagem" class="text-sm text-slate-500 mt-1">
+              Tem a certeza de que deseja continuar?
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-confirmacao"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="confirmar-acao"
+            id="btn-modal-confirmar"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md shadow-red-500/20"
+          >
+            Excluir Registro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="modal-prompt"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-prompt-content"
+      >
+        <div class="flex items-center gap-4 mb-6">
+          <div
+            class="bg-brand-50 text-brand-600 p-3.5 rounded-full flex-shrink-0"
+          >
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-user-plus"></use>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Novo Encarregado</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              Cadastre um novo responsável no sistema.
+            </p>
+          </div>
+        </div>
+        <div>
+          <input
+            type="text"
+            id="input-modal-prompt"
+            placeholder="Digite o nome completo..."
+            class="w-full rounded-xl border border-slate-200 px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 font-medium bg-slate-50/50"
+          />
+        </div>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-prompt"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="confirmar-prompt"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-md shadow-brand-500/20"
+          >
+            Adicionar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="modal-perfil"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-perfil-content"
+      >
+        <div class="flex items-center gap-4 mb-6">
+          <div
+            class="bg-brand-50 text-brand-600 p-3.5 rounded-full flex-shrink-0"
+          >
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-user-tie"></use>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Meu Perfil</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              Atualize suas informações pessoais no sistema.
+            </p>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >E-mail Corporativo</label
+            >
+            <input
+              type="email"
+              id="input-perfil-email"
+              readonly
+              class="field-input ui-field w-full border border-slate-200 bg-slate-100/70 text-slate-500 focus:outline-none cursor-not-allowed shadow-inner transition-colors text-sm font-medium"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >Nome de Exibição</label
+            >
+            <input
+              type="text"
+              id="input-perfil-nome"
+              placeholder="Ex: João Silva"
+              class="w-full rounded-xl border border-slate-200 px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 font-medium bg-slate-50/50"
+            />
+          </div>
+          <div
+            class="pt-4 border-t border-slate-100 flex justify-between items-center gap-4"
+          >
+            <div>
+              <p class="text-xs font-bold text-slate-700 mb-0.5">
+                Segurança da Conta
+              </p>
+              <p class="text-[10px] text-slate-500 leading-tight">
+                Solicite um link seguro para alterar sua senha atual.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="btn-trocar-senha"
+              data-action="trocar-senha"
+              class="px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 flex items-center gap-1.5 shadow-sm shrink-0"
+            >
+              <svg class="w-3.5 h-3.5 text-slate-400" aria-hidden="true">
+                <use href="#icon-lock"></use>
+              </svg>
+              Trocar Senha
+            </button>
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-perfil"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="salvar-perfil"
+            id="btn-salvar-perfil"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-md shadow-brand-500/20"
+          >
+            Salvar Alterações
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="modal-configuracoes"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-configuracoes-content"
+      >
+        <div class="flex items-center gap-4 mb-6">
+          <div
+            class="bg-slate-100 text-slate-600 p-3.5 rounded-full flex-shrink-0"
+          >
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-gear"></use>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Configurações</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              Ajuste as preferências do seu sistema.
+            </p>
+          </div>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >Itens por Página (Histórico)</label
+            >
+            <select
+              id="config-itens-pagina"
+              class="field-input ui-field w-full border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 font-medium bg-slate-50/50 cursor-pointer"
+            >
+              <option value="9">9 itens (Padrão)</option>
+              <option value="15">15 itens</option>
+              <option value="30">30 itens</option>
+              <option value="60">60 itens</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-configuracoes"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="salvar-configuracoes"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 transition-colors shadow-md"
+          >
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="modal-exportacao"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-exportacao-content"
+      >
+        <div class="flex items-center gap-4 mb-6">
+          <div
+            class="bg-emerald-50 text-emerald-600 p-3.5 rounded-full flex-shrink-0"
+          >
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-file-excel"></use>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              Personalizar exportação
+            </h3>
+            <p class="text-sm text-slate-500 mt-1">
+              Escolha as colunas que deseja incluir no Excel.
+            </p>
+          </div>
+        </div>
+        <div
+          id="export-columns-list"
+          class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        ></div>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-exportacao"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="confirmar-exportacao"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-md"
+          >
+            Exportar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="modal-edicao"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 mx-4 transform scale-95 transition-transform duration-300"
+        id="modal-edicao-content"
+      >
+        <div class="flex items-center gap-4 mb-6">
+          <div
+            class="bg-blue-50 text-blue-600 p-3.5 rounded-full flex-shrink-0"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12.828 15H10v-2.828l8.586-8.586z"
+              ></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Editar Lançamento</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              Ajuste os detalhes do registro de saída de material.
+            </p>
+          </div>
+        </div>
+        <form id="form-edicao" class="space-y-4">
+          <input type="hidden" id="edit-lancamento-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                >Data</label
+              >
+              <input
+                type="date"
+                id="edit-data"
+                required
+                class="field-input ui-field w-full"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                >Quantidade</label
+              >
+              <input
+                type="number"
+                step="0.01"
+                id="edit-quantidade"
+                required
+                min="0.01"
+                class="field-input ui-field w-full text-right"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                >Responsável</label
+              >
+              <select
+                id="edit-encarregado"
+                required
+                class="field-input ui-field w-full cursor-pointer"
+              ></select>
+            </div>
+          </div>
+        </form>
+        <div class="flex gap-3 justify-end mt-8">
+          <button
+            data-action="fechar-modal-edicao"
+            class="btn-base bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancelar
+          </button>
+          <button
+            data-action="salvar-edicao"
+            id="btn-salvar-edicao"
+            class="btn-base btn-primary"
+          >
+            Salvar Alterações
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sobreposição mobile -->
+    <div
+      id="sidebar-overlay"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none lg:hidden transition-opacity duration-300"
+      data-action="toggle-sidebar"
+    ></div>
+
+    <!-- Espaçador para desktop -->
+    <div class="hidden lg:block w-20 flex-shrink-0 z-0"></div>
+
+    <!-- Barra lateral -->
+    <aside
+      id="sidebar"
+      class="sidebar-shell fixed inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col shadow-2xl transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out group overflow-hidden w-[80vw] max-w-[18rem] sm:w-72 lg:w-20 lg:hover:w-72 border-r border-slate-800 lg:border-none"
+    >
+      <div
+        class="h-24 flex items-center gap-4 px-5 border-b border-slate-800/50 relative overflow-hidden flex-shrink-0"
+      >
+        <div
+          class="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10 pointer-events-none"
+        ></div>
+        <div
+          class="bg-brand-600 p-2.5 rounded-xl text-white shadow-lg shadow-brand-600/30 z-10 flex-shrink-0 flex items-center justify-center w-11 h-11"
+        >
+          <svg class="text-xl" aria-hidden="true">
+            <use href="#icon-coeng"></use>
+          </svg>
+        </div>
+        <div
+          class="z-10 transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 whitespace-nowrap flex-shrink-0"
+        >
+          <h2
+            class="text-xl font-extrabold text-white tracking-tight leading-tight"
+          >
+            Gestão de Materiais
+          </h2>
+          <p
+            class="text-[10px] text-brand-400 font-bold uppercase tracking-[0.2em]"
+          >
+            COENG
+          </p>
+        </div>
+        <button
+          data-action="toggle-sidebar"
+          class="lg:hidden absolute right-4 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors z-20 w-10 h-10 flex items-center justify-center"
+        >
+          <svg class="text-xl" aria-hidden="true">
+            <use href="#icon-xmark"></use>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="flex-1 py-6 space-y-1.5 overflow-y-auto overflow-x-hidden">
+        <p
+          class="text-[10px] text-slate-500 mb-4 px-5 uppercase font-bold tracking-wider transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 whitespace-nowrap"
+        >
+          Menu Principal
+        </p>
+
+        <button
+          data-action="switch-tab"
+          data-tab="dashboard"
+          id="btn-dashboard"
+          class="w-full flex items-center gap-4 px-5 py-3.5 font-semibold transition-all text-left whitespace-nowrap bg-brand-600/15 text-brand-400 border-r-2 border-brand-500 group/btn"
+        >
+          <div class="w-11 flex justify-center flex-shrink-0">
+            <svg
+              class="w-5 h-5 text-lg transition-transform group-hover/btn:scale-110"
+              aria-hidden="true"
+            >
+              <use href="#icon-chart-pie"></use>
+            </svg>
+          </div>
+          <span
+            class="transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+            >Painel Gerencial</span
+          >
+        </button>
+
+        <button
+          data-action="switch-tab"
+          data-tab="lancamentos"
+          id="btn-lancamentos"
+          class="w-full flex items-center gap-4 px-5 py-3.5 font-semibold transition-all text-left whitespace-nowrap hover:bg-slate-800 text-slate-400 border-r-2 border-transparent group/btn"
+        >
+          <div class="w-11 flex justify-center flex-shrink-0">
+            <svg
+              class="w-5 h-5 text-lg transition-transform group-hover/btn:scale-110"
+              aria-hidden="true"
+            >
+              <use href="#icon-clipboard-list"></use>
+            </svg>
+          </div>
+          <span
+            class="transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+            >Lançamentos</span
+          >
+        </button>
+
+        <div class="mt-8 pt-6 border-t border-slate-800/50">
+          <p
+            class="text-[10px] text-slate-500 mb-4 px-5 uppercase font-bold tracking-wider transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 whitespace-nowrap"
+          >
+            Gestão de Dados
+          </p>
+
+          <label
+            class="w-full flex items-center gap-4 px-5 py-3 hover:bg-slate-800 text-slate-300 font-medium cursor-pointer transition-all text-left text-sm mb-1 whitespace-nowrap group/btn"
+            title="Importe seu arquivo Excel (.xlsx) da Base de Dados"
+          >
+            <div
+              class="w-11 flex justify-center flex-shrink-0 bg-emerald-500/10 p-2 rounded-xl group-hover/btn:bg-emerald-500/20 transition-colors"
+            >
+              <svg class="text-emerald-400 text-sm" aria-hidden="true">
+                <use href="#icon-database"></use>
+              </svg>
+            </div>
+            <span
+              class="transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 flex items-center gap-1"
+              >Carregar Base</span
+            >
+            <input
+              type="file"
+              id="input-excel-base"
+              accept=".xlsx, .xls"
+              class="hidden"
+            />
+          </label>
+
+          <label
+            class="w-full flex items-center gap-4 px-5 py-3 hover:bg-slate-800 text-slate-300 font-medium cursor-pointer transition-all text-left text-sm whitespace-nowrap group/btn"
+            title="Importe o seu histórico de lançamentos/saídas (CSV ou Excel)"
+          >
+            <div
+              class="w-11 flex justify-center flex-shrink-0 bg-blue-500/10 p-2 rounded-xl group-hover/btn:bg-blue-500/20 transition-colors"
+            >
+              <svg class="text-blue-400 text-sm" aria-hidden="true">
+                <use href="#icon-file-import"></use>
+              </svg>
+            </div>
+            <span
+              class="transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+              >Importar Histórico</span
+            >
+            <input
+              type="file"
+              id="input-excel-historico"
+              accept=".xlsx, .xls, .csv"
+              class="hidden"
+            />
+          </label>
+
+          <div
+            class="px-5 mt-5 transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 whitespace-nowrap"
+          >
+            <div
+              id="status-base"
+              class="hidden items-center gap-2.5 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl w-full"
+            >
+              <div
+                class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"
+              ></div>
+              <span
+                id="status-base-text"
+                class="text-xs text-emerald-400 font-semibold truncate"
+                >0 ativos</span
+              >
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div
+        class="p-5 border-t border-slate-800/80 bg-slate-900 overflow-hidden whitespace-nowrap"
+      >
+        <div class="flex items-center gap-4">
+          <div class="w-11 flex justify-center flex-shrink-0">
+            <div
+              class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+            ></div>
+          </div>
+          <div
+            class="transition-opacity duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 flex flex-col"
+          >
+            <p class="text-xs font-bold text-slate-300">Servidor online</p>
+            <p class="text-[10px] text-slate-500">Firebase Firestore</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Conteúdo principal -->
+    <main
+      class="app-shell flex-1 flex flex-col h-full overflow-hidden relative bg-transparent w-full z-0 min-w-0"
+    >
+      <!-- Cabeçalho responsivo com efeito vidro -->
+      <header
+        class="bg-white/80 shadow-sm border-b border-slate-200/80 px-3 sm:px-8 py-3 sm:py-4 flex flex-wrap gap-3 justify-between items-center z-10 backdrop-blur-lg"
+      >
+        <div class="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+          <button
+            type="button"
+            data-action="toggle-sidebar"
+            aria-label="Abrir menu lateral"
+            class="lg:hidden text-slate-500 hover:text-brand-600 focus:outline-none transition-colors p-1.5 rounded-lg hover:bg-brand-50"
+          >
+            <svg class="text-xl" aria-hidden="true">
+              <use href="#icon-bars"></use>
+            </svg>
+          </button>
+          <div>
+            <h1
+              id="page-title"
+              class="text-lg sm:text-2xl font-black text-slate-800 tracking-tight truncate max-w-[18rem] sm:max-w-none"
+            >
+              Painel Gerencial
+            </h1>
+            <p
+              id="page-greeting"
+              class="text-xs text-slate-500 font-medium hidden sm:block"
+            >
+              Carregando...
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4 no-select flex-shrink-0">
+          <!-- Ícone de Notificações com Badge -->
+          <div class="relative hidden sm:block">
+            <button
+              type="button"
+              data-action="toggle-notifications"
+              aria-label="Notificações"
+              class="relative p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors focus:outline-none"
+            >
+              <svg class="w-5 h-5" aria-hidden="true">
+                <use href="#icon-bell"></use>
+              </svg>
+              <span
+                id="badge-notificacoes"
+                class="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white transition-opacity duration-300 opacity-0"
+              ></span>
+            </button>
+            <div
+              id="notifications-dropdown"
+              class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-[0_15px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-100 opacity-0 pointer-events-none transform scale-95 origin-top-right transition-all duration-200 z-50 overflow-hidden"
+            >
+              <div
+                class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"
+              >
+                <p class="text-sm font-bold text-slate-800">Notificações</p>
+                <button
+                  type="button"
+                  data-action="limpar-notificacoes"
+                  class="text-xs text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+                >
+                  Marcar como lidas
+                </button>
+              </div>
+              <div id="lista-notificacoes" class="max-h-80 overflow-y-auto p-2">
+                <div class="p-8 text-center text-slate-400">
+                  <p class="text-xs font-medium animate-pulse">Carregando...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Separador Vertical -->
+          <div class="hidden sm:block w-px h-8 bg-slate-200 mx-1"></div>
+
+          <div class="text-right hidden sm:block no-select min-w-0">
+            <p
+              id="header-user-name"
+              class="text-sm font-bold text-slate-800 leading-tight"
+            >
+              Usuário
+            </p>
+            <p
+              id="header-user-role"
+              class="text-xs text-brand-600 font-bold bg-brand-50 inline-block px-2 py-0.5 rounded-md mt-0.5"
+            >
+              Administrador
+            </p>
+          </div>
+          <div class="relative">
+            <button
+              id="user-avatar-btn"
+              data-action="toggle-dropdown"
+              class="bg-gradient-to-br from-brand-500 to-indigo-600 text-white shadow-lg shadow-brand-500/30 rounded-xl h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center font-black text-lg ring-2 ring-white cursor-pointer hover:scale-105 transition-transform flex-shrink-0 no-select focus:outline-none"
+            >
+              U
+            </button>
+
+            <div
+              id="user-dropdown"
+              class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_15px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-100 opacity-0 pointer-events-none transform scale-95 origin-top-right transition-all duration-200 z-50 overflow-hidden"
+            >
+              <!-- Cabeçalho Informativo -->
+              <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                <p
+                  id="user-dropdown-name"
+                  class="text-sm font-bold text-slate-800"
+                >
+                  Usuário do Sistema
+                </p>
+                <p
+                  id="user-dropdown-email"
+                  class="text-xs text-slate-500 mt-0.5 font-medium truncate"
+                >
+                  acesso@coeng.com
+                </p>
+              </div>
+              <div class="p-2">
+                <button
+                  data-action="abrir-perfil"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors text-left group"
+                >
+                  <svg
+                    class="w-4 h-4 text-slate-400 group-hover:text-slate-600"
+                    aria-hidden="true"
+                  >
+                    <use href="#icon-user-tie"></use>
+                  </svg>
+                  Meu Perfil
+                </button>
+                <button
+                  id="btn-menu-configuracoes"
+                  data-action="abrir-configuracoes"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors text-left group"
+                >
+                  <svg
+                    class="w-4 h-4 text-slate-400 group-hover:text-slate-600"
+                    aria-hidden="true"
+                  >
+                    <use href="#icon-gear"></use>
+                  </svg>
+                  Configurações
+                </button>
+                <div class="h-px bg-slate-100 my-2 mx-2"></div>
+                <button
+                  data-action="logout"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left group"
+                >
+                  <svg
+                    class="w-4 h-4 transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    <use href="#icon-logout"></use>
+                  </svg>
+                  Sair do Sistema
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Contêiner de conteúdo -->
+      <div
+        class="content-scroll flex-1 overflow-y-auto p-3 sm:p-8 custom-scrollbar relative min-w-0"
+      >
+        <!-- ABA 1: PAINEL -->
+        <div id="tab-dashboard" class="tab-content active max-w-7xl mx-auto">
+          <div id="dashboard-skeleton" class="space-y-6 hidden">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+            >
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 h-28 animate-pulse bg-slate-100/70"
+              ></div>
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 h-28 animate-pulse bg-slate-100/70"
+              ></div>
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 h-28 animate-pulse bg-slate-100/70"
+              ></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 h-[320px] animate-pulse bg-slate-100/70"
+              ></div>
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 h-[320px] animate-pulse bg-slate-100/70"
+              ></div>
+            </div>
+          </div>
+          <div id="dashboard-content" class="space-y-6">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+            >
+              <div
+                class="panel-card glass-card rounded-3xl p-5 sm:p-6 flex items-center gap-5 group"
+              >
+                <div
+                  class="bg-brand-50 p-4 rounded-2xl text-brand-600 shadow-inner flex-shrink-0 group-hover:bg-brand-500 group-hover:text-white transition-colors duration-300"
+                >
+                  <svg class="text-2xl" aria-hidden="true">
+                    <use href="#icon-boxes-packing"></use>
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <p
+                    class="text-xs sm:text-sm text-slate-500 font-bold mb-1 truncate uppercase tracking-wider"
+                  >
+                    Total Saídas
+                  </p>
+                  <h3
+                    id="card-total-saidas"
+                    class="text-3xl font-black text-slate-800 tracking-tight truncate"
+                  >
+                    0
+                  </h3>
+                </div>
+              </div>
+              <div
+                class="panel-card glass-card rounded-3xl p-5 sm:p-6 flex items-center gap-5 group"
+              >
+                <div
+                  class="bg-indigo-50 p-4 rounded-2xl text-indigo-600 shadow-inner flex-shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300"
+                >
+                  <svg class="text-2xl" aria-hidden="true">
+                    <use href="#icon-users-gear"></use>
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <p
+                    class="text-xs sm:text-sm text-slate-500 font-bold mb-1 truncate uppercase tracking-wider"
+                  >
+                    Encarregados
+                  </p>
+                  <h3
+                    id="card-total-encarregados"
+                    class="text-3xl font-black text-slate-800 tracking-tight truncate"
+                  >
+                    0
+                  </h3>
+                </div>
+              </div>
+              <div
+                class="panel-card glass-card rounded-3xl p-5 sm:p-6 flex items-center gap-5 group sm:col-span-2 lg:col-span-1"
+              >
+                <div
+                  class="bg-emerald-50 p-4 rounded-2xl text-emerald-600 shadow-inner flex-shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300"
+                >
+                  <svg class="text-2xl" aria-hidden="true">
+                    <use href="#icon-layer"></use>
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <p
+                    class="text-xs sm:text-sm text-slate-500 font-bold mb-1 truncate uppercase tracking-wider"
+                  >
+                    Itens Distintos
+                  </p>
+                  <h3
+                    id="card-total-materiais"
+                    class="text-3xl font-black text-slate-800 tracking-tight truncate"
+                  >
+                    0
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col relative overflow-hidden"
+              >
+                <div class="flex justify-between items-center mb-6 z-10">
+                  <h3
+                    class="text-base sm:text-lg font-extrabold text-slate-800 truncate pr-2"
+                  >
+                    Volume por Encarregado
+                  </h3>
+                  <span
+                    class="text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-600 py-1.5 px-3 rounded-lg whitespace-nowrap border border-slate-200"
+                    >10 maiores</span
+                  >
+                </div>
+                <div
+                  class="relative flex-1 min-h-[250px] sm:min-h-[300px] flex items-center justify-center"
+                >
+                  <canvas
+                    id="chartEncarregados"
+                    class="absolute inset-0 z-10"
+                  ></canvas>
+                  <div
+                    id="empty-chart-enc"
+                    class="text-center z-0 text-slate-400"
+                  >
+                    <div class="bg-slate-50 p-4 rounded-full inline-block mb-3">
+                      <svg class="text-3xl opacity-40" aria-hidden="true">
+                        <use href="#icon-chart-column"></use>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-bold">Aguardando dados</p>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col relative overflow-hidden"
+              >
+                <div class="flex justify-between items-center mb-6 z-10">
+                  <h3
+                    class="text-base sm:text-lg font-extrabold text-slate-800 truncate pr-2"
+                  >
+                    Materiais Mais Solicitados
+                  </h3>
+                  <span
+                    class="text-[10px] sm:text-xs font-bold bg-orange-50 text-orange-600 py-1.5 px-3 rounded-lg whitespace-nowrap border border-orange-100"
+                    >5 maiores</span
+                  >
+                </div>
+                <div
+                  class="relative flex-1 min-h-[250px] sm:min-h-[300px] flex items-center justify-center"
+                >
+                  <canvas
+                    id="chartMateriais"
+                    class="absolute inset-0 z-10"
+                  ></canvas>
+                  <div
+                    id="empty-chart-mat"
+                    class="text-center z-0 text-slate-400"
+                  >
+                    <div class="bg-slate-50 p-4 rounded-full inline-block mb-3">
+                      <svg class="text-3xl opacity-40" aria-hidden="true">
+                        <use href="#icon-chart-bar"></use>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-bold">Aguardando dados</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA 2: LANÇAMENTOS -->
+        <div
+          id="tab-lancamentos"
+          class="tab-content space-y-6 max-w-7xl mx-auto"
+        >
+          <div class="glass-card rounded-3xl overflow-hidden relative">
+            <div
+              class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-500"
+            ></div>
+            <div
+              class="bg-slate-50/50 px-5 sm:px-8 py-5 border-b border-slate-100 flex justify-between items-center"
+            >
+              <h3
+                class="text-lg font-extrabold text-slate-800 flex items-center gap-3"
+              >
+                <div
+                  class="bg-brand-100 text-brand-600 p-2 rounded-xl shadow-inner"
+                >
+                  <svg class="text-sm" aria-hidden="true">
+                    <use href="#icon-plus"></use>
+                  </svg>
+                </div>
+                Registrar Saída
+              </h3>
+            </div>
+            <div class="p-4 sm:p-8">
+              <form id="form-lancamento" class="space-y-5">
+                <div class="ui-grid grid grid-cols-1 md:grid-cols-6 gap-5">
+                  <div class="col-span-1 md:col-span-1">
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                      >Data</label
+                    >
+                    <input
+                      type="date"
+                      id="input-data"
+                      required
+                      aria-label="Data da saída"
+                      class="field-input ui-field w-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 bg-slate-50/50 hover:bg-white text-sm font-medium"
+                    />
+                  </div>
+                  <div class="col-span-1 md:col-span-1">
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                      >Cód. Almox.</label
+                    >
+                    <input
+                      type="text"
+                      id="input-codigo"
+                      required
+                      placeholder="Ex: 14407"
+                      aria-label="Código do almoxarifado"
+                      class="field-input ui-field w-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 font-bold bg-slate-50/50 hover:bg-white text-sm placeholder:font-normal placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div class="col-span-1 md:col-span-4 relative group">
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between items-center"
+                    >
+                      <span>Material Encontrado</span>
+                      <span
+                        id="badge-encontrado"
+                        class="text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md opacity-0 transition-opacity"
+                      >
+                        <svg
+                          class="mr-1 inline-block w-3.5 h-3.5"
+                          aria-hidden="true"
+                        >
+                          <use href="#icon-check"></use></svg
+                        >Base OK</span
+                      >
+                    </label>
+                    <input
+                      type="text"
+                      id="input-material"
+                      required
+                      readonly
+                      placeholder="Insira o código para buscar..."
+                      aria-label="Material encontrado"
+                      class="field-input ui-field w-full border border-slate-200 bg-slate-100/70 text-slate-500 focus:outline-none cursor-not-allowed shadow-inner transition-colors text-sm font-medium"
+                    />
+                    <div
+                      id="status-form"
+                      class="mt-2 text-xs font-semibold text-slate-500"
+                    >
+                      Informe o código do material.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ui-grid grid grid-cols-1 md:grid-cols-6 gap-5">
+                  <div class="col-span-1 md:col-span-1">
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                      >Quantidade</label
+                    >
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="input-quantidade"
+                      required
+                      min="0.01"
+                      placeholder="0"
+                      aria-label="Quantidade da saída"
+                      class="field-input ui-field w-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-brand-700 font-black bg-slate-50/50 hover:bg-white text-sm placeholder:font-normal placeholder:text-slate-400 text-right"
+                    />
+                  </div>
+                  <div class="col-span-1 md:col-span-4">
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                      >Responsável (Encarregado)</label
+                    >
+                    <div class="flex flex-col sm:flex-row items-stretch gap-2">
+                      <select
+                        id="select-encarregado"
+                        required
+                        aria-label="Selecionar responsável"
+                        class="field-input ui-field flex-1 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-slate-700 bg-slate-50/50 hover:bg-white cursor-pointer text-sm font-semibold"
+                      ></select>
+                      <button
+                        type="button"
+                        data-action="abrir-prompt"
+                        aria-label="Cadastrar novo responsável"
+                        class="btn-base btn-secondary h-[44px] w-full sm:w-auto"
+                        title="Cadastrar novo"
+                      >
+                        <svg class="w-4 h-4" aria-hidden="true">
+                          <use href="#icon-plus"></use>
+                        </svg>
+                        <span class="hidden sm:inline">Novo</span>
+                      </button>
+                      <button
+                        id="btn-remover-encarregado"
+                        type="button"
+                        data-action="remover-encarregado"
+                        aria-label="Remover responsável selecionado"
+                        class="btn-base h-[44px] w-full sm:w-auto bg-red-500 text-white transition-colors shadow-sm"
+                        title="Remover selecionado"
+                      >
+                        <svg class="w-4 h-4" aria-hidden="true">
+                          <use href="#icon-trash-can"></use>
+                        </svg>
+                        <span class="hidden sm:inline">Remover</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-span-1 md:col-span-1 flex items-end">
+                    <button
+                      type="submit"
+                      id="btn-submit"
+                      aria-label="Gravar saída"
+                      class="btn-base btn-primary w-full text-sm mt-2 md:mt-0"
+                    >
+                      <svg class="w-4 h-4" aria-hidden="true">
+                        <use href="#icon-check"></use>
+                      </svg>
+                      Gravar
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Histórico em grade responsiva -->
+          <div
+            class="glass-card rounded-3xl overflow-hidden flex flex-col relative"
+          >
+            <div
+              class="bg-white px-4 sm:px-8 pt-3 pb-4 sm:pt-4 sm:pb-5 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-5"
+            >
+              <h3
+                class="text-lg font-extrabold text-slate-800 flex items-center gap-3 whitespace-normal sm:whitespace-nowrap leading-tight mt-0.5 lg:mt-0"
+              >
+                <div class="bg-slate-100 text-slate-600 p-2 rounded-xl">
+                  <svg class="text-sm" aria-hidden="true">
+                    <use href="#icon-table-cells-large"></use>
+                  </svg>
+                </div>
+                Histórico de Lançamentos
+              </h3>
+
+              <div
+                class="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-wrap xl:items-center gap-3 sm:gap-4 w-full justify-end max-w-full"
+              >
+                <div
+                  class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm w-full min-[480px]:w-auto xl:min-w-[180px] min-w-0 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg class="text-brand-500 text-sm mr-2" aria-hidden="true">
+                    <use href="#icon-users-gear"></use>
+                  </svg>
+                  <select
+                    id="select-filtro-encarregado"
+                    class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
+                  ></select>
+                </div>
+                <div
+                  class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm w-full min-[480px]:w-auto xl:min-w-[150px] min-w-0 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg class="text-slate-400 text-sm mr-2" aria-hidden="true">
+                    <use href="#icon-clipboard-check"></use>
+                  </svg>
+                  <select
+                    id="select-filtro-status"
+                    class="block w-full xl:w-36 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="Não">Pendentes</option>
+                    <option value="Sim">Concluídos</option>
+                  </select>
+                </div>
+                <div
+                  class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm w-full min-[480px]:w-auto xl:min-w-[170px] min-w-0 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg class="text-slate-400 text-sm mr-2" aria-hidden="true">
+                    <use href="#icon-calendar"></use>
+                  </svg>
+                  <input
+                    type="date"
+                    id="input-data-de"
+                    class="block w-full border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none"
+                    aria-label="Filtrar a partir da data"
+                  />
+                </div>
+                <div
+                  class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm w-full min-[480px]:w-auto xl:min-w-[170px] min-w-0 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg class="text-slate-400 text-sm mr-2" aria-hidden="true">
+                    <use href="#icon-calendar"></use>
+                  </svg>
+                  <input
+                    type="date"
+                    id="input-data-ate"
+                    class="block w-full border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none"
+                    aria-label="Filtrar até a data"
+                  />
+                </div>
+                <div
+                  class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm w-full min-[480px]:w-auto xl:min-w-[190px] min-w-0 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg class="text-slate-400 text-sm mr-2" aria-hidden="true">
+                    <use href="#icon-arrow-down-a-z"></use>
+                  </svg>
+                  <select
+                    id="select-ordenacao"
+                    class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
+                  >
+                    <option value="data_desc">Mais recentes</option>
+                    <option value="data_asc">Mais antigos</option>
+                    <option value="material_asc">Material (A-Z)</option>
+                    <option value="quantidade_desc">Maior qtd.</option>
+                    <option value="encarregado_asc">Encarregado (A-Z)</option>
+                  </select>
+                </div>
+
+                <div
+                  class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl shadow-sm w-full min-[480px]:w-auto xl:min-w-[240px] px-3 h-[44px] transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20"
+                >
+                  <svg
+                    class="w-4 h-4 text-slate-400 flex-shrink-0"
+                    aria-hidden="true"
+                  >
+                    <use href="#icon-magnifying-glass"></use>
+                  </svg>
+                  <input
+                    type="text"
+                    id="input-search"
+                    placeholder="Pesquisar..."
+                    aria-label="Pesquisar lançamentos"
+                    class="w-full bg-transparent border-none p-0 m-0 text-slate-700 font-medium focus:ring-0 focus:outline-none text-sm placeholder-slate-400 shadow-none"
+                  />
+                  <button
+                    type="button"
+                    id="btn-clear-search"
+                    aria-label="Limpar pesquisa"
+                    class="hidden text-slate-400 hover:text-slate-600 focus:outline-none p-1 transition-colors flex-shrink-0"
+                  >
+                    <svg class="w-3.5 h-3.5" aria-hidden="true">
+                      <use href="#icon-xmark"></use>
+                    </svg>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  data-action="limpar-filtros"
+                  aria-label="Limpar filtros"
+                  class="btn-base bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-red-600 shrink-0 w-full min-[480px]:w-auto xl:w-auto transition-colors shadow-sm"
+                  title="Limpar filtros"
+                >
+                  <svg class="w-4 h-4" aria-hidden="true">
+                    <use href="#icon-xmark"></use>
+                  </svg>
+                  <span class="hidden sm:inline">Limpar</span>
+                </button>
+                <button
+                  type="button"
+                  data-action="exportar-excel"
+                  aria-label="Exportar lançamentos para Excel"
+                  class="btn-base btn-success shrink-0 w-full min-[480px]:w-auto xl:w-auto"
+                  title="Exportar para Excel"
+                >
+                  <svg class="w-4 h-4" aria-hidden="true">
+                    <use href="#icon-file-excel"></use>
+                  </svg>
+                  <span class="hidden sm:inline">Exportar</span>
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="grid-lancamentos"
+              class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 p-4 sm:p-8 bg-slate-50/50 min-h-[400px]"
+            >
+              <!-- Carregamento inicial -->
+              <div
+                class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-5 animate-pulse-fast"
+              >
+                <div class="flex justify-between gap-4">
+                  <div class="flex-1 space-y-3">
+                    <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                    <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+                  </div>
+                  <div class="h-14 w-14 bg-slate-200 rounded-2xl"></div>
+                </div>
+                <div class="border-t border-slate-100"></div>
+                <div class="space-y-4">
+                  <div class="flex justify-between">
+                    <div class="h-3 bg-slate-200 rounded w-20"></div>
+                    <div class="h-3 bg-slate-200 rounded w-24"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="tabela-footer"
+              class="bg-white border-t border-slate-100 px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0"
+            >
+              <span
+                id="tabela-info"
+                class="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-widest"
+                >Calculando...</span
+              >
+              <div class="flex items-center gap-2">
+                <button
+                  id="btn-prev-page"
+                  type="button"
+                  data-action="mudar-pagina"
+                  data-dir="-1"
+                  aria-label="Página anterior"
+                  class="btn-base px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                >
+                  <svg class="w-4 h-4" aria-hidden="true">
+                    <use href="#icon-chevron-left"></use>
+                  </svg>
+                  <span class="hidden sm:inline">Anterior</span>
+                </button>
+                <span
+                  id="tabela-paginacao-info"
+                  class="text-sm text-brand-700 font-black px-4 bg-brand-50 py-1.5 rounded-xl border border-brand-100"
+                  >1 / 1</span
+                >
+                <button
+                  id="btn-next-page"
+                  type="button"
+                  data-action="mudar-pagina"
+                  data-dir="1"
+                  aria-label="Próxima página"
+                  class="btn-base px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                >
+                  <span class="hidden sm:inline">Próxima</span>
+                  <svg class="w-4 h-4" aria-hidden="true">
+                    <use href="#icon-chevron-right"></use>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Scripts -->
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

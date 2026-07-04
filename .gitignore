@@ -1,0 +1,8 @@
+.vercel
+node_modules
+
+# Ignorar pasta de build
+dist
+
+# Ignorar arquivos de variáveis de ambiente que contêm segredos.
+.env.local
