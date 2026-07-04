@@ -4,7 +4,6 @@ import {
   addDoc,
   onSnapshot,
   deleteDoc,
-  where, // Adicionado para filtrar documentos excluídos
   doc,
   serverTimestamp,
   writeBatch,
@@ -96,98 +95,23 @@ export const salvarBaseNoFirestoreLote = async (baseDados) => {
 // ==========================================
 // LANÇAMENTOS E HISTÓRICO
 // ==========================================
-export const adicionarLancamentoNoFirestore = async (
-  uid,
-  dados,
-  createdBy,
-  createdByUid,
-) => {
+export const adicionarLancamentoNoFirestore = async (uid, dados) => {
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
-  await addDoc(ref, {
-    ...dados,
-    createdAt: serverTimestamp(),
-    createdBy: createdBy,
-    createdByUid: createdByUid,
-    lastModifiedAt: serverTimestamp(), // Inicialmente, é o mesmo que createdAt
-    lastModifiedBy: createdBy,
-    lastModifiedByUid: createdByUid,
-    deleted: false, // Marca como não excluído
-  });
+  await addDoc(ref, { ...dados, timestamp: serverTimestamp() });
 };
 
-// Renomeada para softDeletarLancamentoNoFirestore para exclusão lógica
-export const softDeletarLancamentoNoFirestore = async (
-  uid,
-  docId,
-  deletedBy,
-  deletedByUid,
-) => {
-  const docRef = doc(
-    db,
-    "artifacts",
-    appId,
-    "users",
-    uid,
-    "lancamentos",
-    docId,
+export const deletarLancamentoNoFirestore = async (uid, docId) => {
+  await deleteDoc(
+    doc(db, "artifacts", appId, "users", uid, "lancamentos", docId),
   );
-  await updateDoc(docRef, {
-    deleted: true,
-    deletedAt: serverTimestamp(),
-    deletedBy: deletedBy,
-    deletedByUid: deletedByUid,
-    lastModifiedAt: serverTimestamp(), // Atualiza o timestamp de modificação
-    lastModifiedBy: deletedBy,
-    lastModifiedByUid: deletedByUid,
-  });
 };
 
-export const atualizarLancamentoNoFirestore = async (
-  uid,
-  docId,
-  novosDados,
-  modifiedBy,
-  modifiedByUid,
-) => {
-  if (!uid || !docId)
-    throw new Error("UID do usuário e ID do documento são obrigatórios.");
-  const docRef = doc(
-    db,
-    "artifacts",
-    appId,
-    "users",
-    uid,
-    "lancamentos",
-    docId,
-  );
-
-  await updateDoc(docRef, {
-    ...novosDados,
-    lastModifiedAt: serverTimestamp(),
-    lastModifiedBy: modifiedBy,
-    lastModifiedByUid: modifiedByUid,
-  });
-};
-
-export const alternarBaixaNoFirestore = async (
-  uid,
-  idOuIds,
-  novoStatus,
-  modifiedBy,
-  modifiedByUid,
-) => {
-  const updateData = {
-    baixa: novoStatus,
-    lastModifiedAt: serverTimestamp(),
-    lastModifiedBy: modifiedBy,
-    lastModifiedByUid: modifiedByUid,
-  };
-
+export const alternarBaixaNoFirestore = async (uid, idOuIds, novoStatus) => {
   if (Array.isArray(idOuIds)) {
     const batch = writeBatch(db);
     idOuIds.forEach((id) => {
       const ref = doc(db, "artifacts", appId, "users", uid, "lancamentos", id);
-      batch.update(ref, updateData);
+      batch.update(ref, { baixa: novoStatus });
     });
     await batch.commit();
   } else {
@@ -200,29 +124,15 @@ export const alternarBaixaNoFirestore = async (
       "lancamentos",
       idOuIds,
     );
-    await updateDoc(ref, updateData);
+    await updateDoc(ref, { baixa: novoStatus });
   }
 };
 
-export const salvarLancamentosEmLote = async (
-  uid,
-  lancamentos,
-  createdBy,
-  createdByUid,
-) => {
+export const salvarLancamentosEmLote = async (uid, lancamentos) => {
   const batch = writeBatch(db);
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
   lancamentos.forEach((l) =>
-    batch.set(doc(ref), {
-      ...l,
-      createdAt: serverTimestamp(),
-      createdBy: createdBy,
-      createdByUid: createdByUid,
-      lastModifiedAt: serverTimestamp(),
-      lastModifiedBy: createdBy,
-      lastModifiedByUid: createdByUid,
-      deleted: false,
-    }),
+    batch.set(doc(ref), { ...l, timestamp: serverTimestamp() }),
   );
   if (lancamentos.length > 0) await batch.commit();
   return lancamentos.length;
@@ -230,13 +140,7 @@ export const salvarLancamentosEmLote = async (
 
 export const escutarLancamentos = (uid, callback) => {
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
-  // Filtra documentos que não foram marcados como excluídos
-  const q = query(
-    ref,
-    where("deleted", "==", false),
-    orderBy("createdAt", "desc"), // Alterado de "timestamp" para "createdAt"
-  );
-  return onSnapshot(q, callback, (error) =>
+  return onSnapshot(ref, callback, (error) =>
     console.error("Erro escutando lançamentos", error),
   );
 };

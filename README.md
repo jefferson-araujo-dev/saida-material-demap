@@ -58,19 +58,7 @@ npm install
 
 ### 2. Configure o Firebase
 
-Crie um arquivo chamado `.env.local` na raiz do projeto e adicione as credenciais do seu projeto do Firebase. Este arquivo não será enviado para o repositório.
-
-```
-VITE_FIREBASE_API_KEY="SUA_API_KEY"
-VITE_FIREBASE_AUTH_DOMAIN="SEU_AUTH_DOMAIN"
-VITE_FIREBASE_PROJECT_ID="SEU_PROJECT_ID"
-VITE_FIREBASE_STORAGE_BUCKET="SEU_STORAGE_BUCKET"
-VITE_FIREBASE_MESSAGING_SENDER_ID="SEU_MESSAGING_SENDER_ID"
-VITE_FIREBASE_APP_ID="SEU_APP_ID"
-VITE_APP_ID="demap-estoque-app"
-```
-
-**Importante:** Para o deploy na Vercel, essas mesmas variáveis devem ser configuradas no painel do projeto em **Settings > Environment Variables**.
+Edite o arquivo [js/firebase.js](js/firebase.js) e substitua o objeto `firebaseConfig` pelas credenciais do seu projeto no Firebase Console.
 
 Certifique-se de habilitar:
 

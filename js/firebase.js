@@ -2,17 +2,20 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Lê as variáveis de ambiente do Vite (que devem começar com VITE_)
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
+const firebaseConfig =
+  typeof __firebase_config !== "undefined"
+    ? JSON.parse(__firebase_config)
+    : {
+        apiKey: "AIzaSyB8hC3rX_UuMIkdSdcswsez4n_7ZiDhJ6k",
+        authDomain: "saida-demap.firebaseapp.com",
+        projectId: "saida-demap",
+        storageBucket: "saida-demap.firebasestorage.app",
+        messagingSenderId: "28837173501",
+        appId: "1:28837173501:web:2a1d090d06479c8681c694",
+      };
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const appId = import.meta.env.VITE_APP_ID || "demap-estoque-app";
+export const appId =
+  typeof __app_id !== "undefined" ? __app_id : "demap-estoque-app";

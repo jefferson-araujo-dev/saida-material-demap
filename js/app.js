@@ -17,7 +17,7 @@ import {
   fetchBaseDoFirestore,
   salvarBaseNoFirestoreLote,
   adicionarLancamentoNoFirestore,
-  softDeletarLancamentoNoFirestore, // Renomeado para soft-delete
+  deletarLancamentoNoFirestore,
   alternarBaixaNoFirestore,
   salvarLancamentosEmLote,
   escutarLancamentos,
@@ -378,6 +378,15 @@ document.addEventListener("click", (e) => {
     case "login-anonimo":
       loginAnonimo();
       break;
+    case "switch-tab": {
+      const tabId = actionEl.getAttribute("data-tab");
+      switchTab(tabId);
+      if (tabId === "dashboard" && pendingChartData) {
+        renderizarGraficos(pendingChartData.aEnc, pendingChartData.aMat);
+        pendingChartData = null;
+      }
+      break;
+    }
     case "limpar-filtros":
       limparFiltros();
       break;
@@ -401,35 +410,7 @@ document.addEventListener("click", (e) => {
     case "deletar-lancamento":
       deletarLancamento(actionEl.getAttribute("data-id"));
       break;
-    case "abrir-modal-edicao":
-      abrirModalEdicao(actionEl.getAttribute("data-id"));
-      break;
-    case "fechar-modal-edicao":
-      fecharModalEdicao();
-      break;
-    case "salvar-edicao":
-      salvarEdicao();
-      break;
   }
-});
-
-// Função para lidar com a troca de abas
-const onTabSwitch = (tabId) => {
-  switchTab(tabId); // Chama a função original de ui.js
-
-  // Se a aba do dashboard for ativada e houver dados de gráfico pendentes,
-  // renderize os gráficos.
-  if (tabId === "dashboard" && pendingChartData) {
-    renderizarGraficos(pendingChartData.aEnc, pendingChartData.aMat);
-    pendingChartData = null; // Limpa os dados pendentes após a renderização
-  }
-};
-
-// Adiciona o listener para os botões de aba
-document.querySelectorAll('[data-action="switch-tab"]').forEach((btn) => {
-  btn.addEventListener("click", () =>
-    onTabSwitch(btn.getAttribute("data-tab")),
-  );
 });
 
 // Fecha o menu suspenso ao clicar fora dele
@@ -664,72 +645,6 @@ const salvarConfiguracoes = () => {
   fecharModalConfiguracoes();
   paginaAtual = 1;
   if (dadosFiltrados.length > 0) renderizarGridLancamentos();
-};
-
-const abrirModalEdicao = (id) => {
-  const lancamento = dadosAtuais.find((d) => d.id === id);
-  if (!lancamento) {
-    showToast("Registro não encontrado para edição.", "error");
-    return;
-  }
-
-  document.getElementById("edit-lancamento-id").value = lancamento.id;
-  document.getElementById("edit-data").value = lancamento.data;
-  document.getElementById("edit-quantidade").value = lancamento.quantidade;
-
-  const select = document.getElementById("edit-encarregado");
-  select.innerHTML = "";
-  encarregados.forEach((nome) => {
-    select.add(new Option(nome, nome));
-  });
-  select.value = lancamento.encarregado;
-
-  abrirModal("modal-edicao", "modal-edicao-content");
-};
-
-const fecharModalEdicao = () => {
-  fecharModal("modal-edicao", "modal-edicao-content");
-};
-
-const salvarEdicao = async () => {
-  const id = document.getElementById("edit-lancamento-id").value;
-  const novosDados = {
-    data: document.getElementById("edit-data").value,
-    quantidade: Number(document.getElementById("edit-quantidade").value),
-    encarregado: document.getElementById("edit-encarregado").value,
-  };
-
-  if (
-    !id ||
-    !novosDados.data ||
-    !novosDados.encarregado ||
-    novosDados.quantidade <= 0
-  ) {
-    showToast("Por favor, preencha todos os campos corretamente.", "error");
-    return;
-  }
-
-  const btn = document.getElementById("btn-salvar-edicao");
-  const originalText = btn.innerHTML;
-  btn.innerHTML = `${svgIcon("spinner", "w-4 h-4 animate-spin")} Salvando...`;
-  btn.disabled = true;
-
-  try {
-    await atualizarLancamentoNoFirestore(
-      currentUser.uid,
-      id,
-      novosDados,
-      currentUser.displayName,
-      currentUser.uid,
-    );
-    showToast("Lançamento atualizado com sucesso!", "success");
-    fecharModalEdicao();
-  } catch (error) {
-    mostrarErroFirebase(error, "Erro ao salvar as alterações.");
-  } finally {
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
 };
 
 // ==========================================
@@ -1230,13 +1145,9 @@ document
           const count = await salvarLancamentosEmLote(
             currentUser.uid,
             lancamentosFormatados,
-            currentUser.displayName,
-            currentUser.uid,
           );
           showToast(`${count} registros importados!`, "success");
           criarNotificacao(
-            currentUser.displayName,
-            currentUser.uid,
             "Importação Concluída",
             `${count} lançamentos foram importados do histórico.`,
             "success",
@@ -1290,22 +1201,18 @@ document
     }
 
     try {
-      await adicionarLancamentoNoFirestore(
-        currentUser.uid,
-        {
-          // Passa dados do criador
-          data: document.getElementById("input-data").value,
-          codigo,
-          material,
-          quantidade,
-          encarregado,
-          baixa: "Não",
-        },
-        currentUser.displayName,
-        currentUser.uid,
-      );
+      await adicionarLancamentoNoFirestore(currentUser.uid, {
+        data: document.getElementById("input-data").value,
+        codigo,
+        material,
+        quantidade,
+        encarregado,
+        baixa: "Não",
+      });
       document.getElementById("form-lancamento").reset();
-      document.getElementById("input-data").value = obterDataLocalFormatada();
+      document.getElementById("input-data").value = new Date()
+        .toISOString()
+        .split("T")[0];
       inputMaterial.className =
         "w-full rounded-xl border border-slate-200 px-4 py-3 bg-slate-100/70 text-slate-500 focus:outline-none cursor-not-allowed shadow-inner transition-colors text-sm font-medium";
       badgeEncontrado.classList.add("opacity-0");
@@ -1339,12 +1246,7 @@ const deletarLancamento = (docId) => {
     "Atenção: Esta ação removerá a saída do banco de dados permanentemente.",
     async () => {
       try {
-        await softDeletarLancamentoNoFirestore(
-          currentUser.uid,
-          docId,
-          currentUser.displayName,
-          currentUser.uid,
-        ); // Soft-delete
+        await deletarLancamentoNoFirestore(currentUser.uid, docId);
         showToast("Registro apagado.", "success");
       } catch (error) {
         mostrarErroFirebase(error, "Erro ao excluir o registro.");
@@ -1358,13 +1260,7 @@ const toggleBaixa = async (idOuIds, statusAtual) => {
   if (!currentUser) return;
   const novoStatus = statusAtual === "Sim" ? "Não" : "Sim";
   try {
-    await alternarBaixaNoFirestore(
-      currentUser.uid,
-      idOuIds,
-      novoStatus,
-      currentUser.displayName,
-      currentUser.uid,
-    );
+    await alternarBaixaNoFirestore(currentUser.uid, idOuIds, novoStatus);
     showToast(`Status alterado para "${novoStatus}".`, "success");
   } catch (error) {
     mostrarErroFirebase(error, "Erro ao sincronizar o status.");
@@ -1671,11 +1567,8 @@ function renderizarGridLancamentos() {
                               item.isGrouped
                                 ? `<div class="w-16 flex-shrink-0 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">${svgIcon("layer", "w-4 h-4")} ${item.ids.length}x</div>`
                                 : isAdmin
-                                  ? `
-                                  <button data-action="abrir-modal-edicao" data-id="${item.id}" class="w-12 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Editar Registro"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12.828 15H10v-2.828l8.586-8.586z"></path></svg></button>
-                                  <button data-action="deletar-lancamento" data-id="${item.id}" class="w-12 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Excluir Registro">${svgIcon("trash", "w-4 h-4")}</button>
-                                  `
-                                  : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para editar/excluir">${svgIcon("trash", "w-4 h-4")}</div>`
+                                  ? `<button data-action="deletar-lancamento" data-id="${item.id}" class="w-16 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Excluir Registro">${svgIcon("trash", "w-4 h-4")}</button>`
+                                  : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para excluir">${svgIcon("trash", "w-4 h-4")}</div>`
                             }
                         </div>
                     </div>`;
