@@ -13,6 +13,7 @@ import {
   query,
   orderBy,
   limit,
+  getDoc,
 } from "firebase/firestore";
 
 // ==========================================
@@ -47,7 +48,7 @@ export const escutarNotificacoes = (uid, callback) => {
   const ref = collection(db, "artifacts", appId, "users", uid, "notificacoes");
   const q = query(ref, orderBy("timestamp", "desc"), limit(20));
   return onSnapshot(q, callback, (error) =>
-    console.error("Erro escuta notificações", error),
+    console.error("Erro escuta notificações", error), // Usar mostrarErroFirebase aqui
   );
 };
 
@@ -66,7 +67,7 @@ export const escutarEncarregados = (callback) => {
   return onSnapshot(
     collection(db, "artifacts", appId, "encarregados"),
     callback,
-    (err) => console.error("Erro encarregados", err),
+    (err) => console.error("Erro encarregados", err), // Usar mostrarErroFirebase aqui
   );
 };
 
@@ -141,6 +142,6 @@ export const salvarLancamentosEmLote = async (uid, lancamentos) => {
 export const escutarLancamentos = (uid, callback) => {
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
   return onSnapshot(ref, callback, (error) =>
-    console.error("Erro escutando lançamentos", error),
+    console.error("Erro escutando lançamentos", error), // Usar mostrarErroFirebase aqui
   );
 };

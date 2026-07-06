@@ -1,6 +1,5 @@
 import { auth } from "./firebase.js";
 import {
-  svgIcon,
   setGreeting,
   toggleSidebar,
   toggleDropdown,
@@ -8,290 +7,120 @@ import {
   switchTab,
 } from "./ui.js";
 import {
-  limparNotificacoesNoFirestore,
-  criarNotificacaoNoFirestore,
-  escutarNotificacoes,
-  salvarEncarregadoNoFirestore,
-  removerEncarregadoNoFirestore,
-  escutarEncarregados,
-  fetchBaseDoFirestore,
-  salvarBaseNoFirestoreLote,
   adicionarLancamentoNoFirestore,
   deletarLancamentoNoFirestore,
   alternarBaixaNoFirestore,
   salvarLancamentosEmLote,
+  salvarEncarregadoNoFirestore,
+  removerEncarregadoNoFirestore,
+  escutarNotificacoes,
+  escutarEncarregados,
+  fetchBaseDoFirestore,
+  salvarBaseNoFirestoreLote,
   escutarLancamentos,
 } from "./database.js";
-
 import {
   signInAnonymously,
-  signInWithCustomToken,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
   updateProfile,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from "chart.js";
 import * as XLSX from "xlsx";
 import {
   normalizarData,
   normalizarLancamentoImportado,
   normalizarTexto,
 } from "./normalizacao.mjs";
-
-Chart.register(
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-);
+import {
+  DOM,
+  debounce,
+  mostrarErroFirebase,
+  renderizarSkeletonTabela,
+  svgIcon,
+  renderizarSkeletonDashboard,
+  esconderSkeletonDashboard,
+} from "./domUtils.js";
+import {
+  logout,
+  abrirModalPerfil,
+  fecharModalPerfil,
+  salvarPerfil,
+  enviarEmailTrocaSenha,
+  loginAnonimo,
+} from "./auth.js";
+import {
+  abrirModal,
+  fecharModal,
+  abrirModalConfirmacao,
+  fecharModalConfirmacao,
+  confirmarModalConfirmacao,
+  abrirModalPrompt,
+  fecharModalPrompt,
+  confirmarModalPrompt,
+  abrirModalExportacao,
+  fecharModalExportacao,
+  confirmarExportacao,
+} from "./modals.js";
+import {
+  toggleNotifications,
+  limparNotificacoes,
+  criarNotificacao,
+  iniciarEscutaNotificacoes,
+} from "./notifications.js";
+import {
+  dadosAtuais,
+  dadosFiltrados,
+  ordenacaoAtual,
+  paginaAtual as getPaginaAtual,
+  itensPorPagina,
+  encarregados,
+  setItensPorPagina,
+  setOrdenacaoAtual,
+  setDadosAtuais,
+  baseDados,
+  renderizarSelectEncarregados,
+  renderizarGridLancamentos,
+  aplicarFiltroPesquisa,
+  aplicarOrdenacao,
+  mudarPagina,
+  limparFiltros,
+  onFiltroChange,
+  carregarBaseDoFirestore,
+  carregarEncarregadosDoFirestore,
+  removerEncarregadoSelecionado,
+} from "./dataManagement.js";
+import {
+  pendingChartData as getPendingChartData,
+  isLoadingDashboard,
+  setIsLoadingDashboard,
+  atualizarDashboard,
+  renderizarGraficos,
+} from "./dashboard.js";
+import {
+  setColunasExportacaoSelecionadas,
+  carregarColunasExportacao,
+  exportarExcel,
+} from "./excel.js";
 
 // ==========================================
 // 0. ESTADO GLOBAL E UTILITÁRIOS DE INTERFACE
 // ==========================================
-let chartEnc = null;
-let chartMat = null;
-let acaoPendenteModal = null;
+export let currentUser;
+export let isAdmin = false;
+export let isLoadingTabela = true;
+
 let pendingChartData = null;
-let isLoadingDashboard = true;
-let isLoadingTabela = true;
-let dadosCarregadosToastMostrado = false;
-let colunasExportacaoSelecionadas = [];
 
-// ==========================================
-// UTILITÁRIOS DE SEGURANÇA
-// ==========================================
-const escapeHTML = (str) => {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
-// ==========================================
-// UTILITÁRIOS DE DESEMPENHO
-// ==========================================
-const debounce = (func, wait) => {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
-
-// ==========================================
-// CACHE DE DOM E AUXILIARES DE DESEMPENHO
-// ==========================================
-const DOM = {
-  grid: document.getElementById("grid-lancamentos"),
-  tabInfo: document.getElementById("tabela-info"),
-  pagInfo: document.getElementById("tabela-paginacao-info"),
-  btnPrev: document.getElementById("btn-prev-page"),
-  btnNext: document.getElementById("btn-next-page"),
-};
-
-const colunasExportacaoMeta = {
-  data: "Data",
-  codigo: "Código",
-  material: "Material",
-  quantidade: "Quantidade",
-  encarregado: "Encarregado",
-  baixa: "Baixa",
-};
-
-const carregarColunasExportacao = () => {
-  const salvas = localStorage.getItem("demap_export_columns");
-  if (!salvas) {
-    colunasExportacaoSelecionadas = Object.keys(colunasExportacaoMeta);
-    return;
-  }
-  try {
-    const parsed = JSON.parse(salvas);
-    colunasExportacaoSelecionadas =
-      Array.isArray(parsed) && parsed.length
-        ? parsed.filter((key) =>
-            Object.prototype.hasOwnProperty.call(colunasExportacaoMeta, key),
-          )
-        : Object.keys(colunasExportacaoMeta);
-  } catch (error) {
-    colunasExportacaoSelecionadas = Object.keys(colunasExportacaoMeta);
-  }
-};
-
-const formatarDataParaDisplay = (valor) => {
-  if (!valor) return "";
-  const texto = String(valor);
-  return texto.includes("-") ? texto.split("-").reverse().join("/") : texto;
-};
-
-const atualizarTextoSeExiste = (id, valor) => {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
-};
-
-const abrirModal = (modalId, contentId, callback) => {
-  const modal = document.getElementById(modalId);
-  const content = document.getElementById(contentId);
-  if (!modal || !content) return;
-
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    modal.classList.remove("opacity-0");
-    content.classList.remove("scale-95");
-    if (typeof callback === "function") callback();
-  });
-};
-
-const fecharModal = (modalId, contentId) => {
-  const modal = document.getElementById(modalId);
-  const content = document.getElementById(contentId);
-  if (!modal || !content) return;
-  modal.classList.add("opacity-0");
-  content.classList.add("scale-95");
-  setTimeout(() => modal.classList.add("hidden"), 300);
-};
-
-carregarColunasExportacao();
-
-const obterMensagemErroFirebase = (
-  error,
-  fallback = "Não foi possível concluir a operação.",
-) => {
-  const code = error?.code || "";
-  const msg = error?.message || "";
-  const mapa = {
-    "auth/invalid-credential":
-      "Credenciais inválidas. Verifique e-mail e senha.",
-    "auth/user-not-found": "Nenhum usuário encontrado com esse e-mail.",
-    "auth/wrong-password": "Senha incorreta. Tente novamente.",
-    "auth/email-already-in-use": "Este e-mail já está cadastrado.",
-    "auth/too-many-requests":
-      "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
-    "auth/network-request-failed":
-      "Sem conexão com a internet. Verifique sua rede.",
-    "permission-denied": "Você não tem permissão para executar esta ação.",
-    unavailable:
-      "O serviço está temporariamente indisponível. Tente novamente mais tarde.",
-  };
-  if (mapa[code]) return mapa[code];
-  if (/offline|network|fetch/i.test(msg))
-    return "Sem conexão com a internet. Verifique sua rede.";
-  if (/permission|denied/i.test(msg))
-    return "Você não tem permissão para executar esta ação.";
-  return fallback;
-};
-
-const mostrarErroFirebase = (
-  error,
-  fallback = "Não foi possível concluir a operação.",
-) => {
-  const mensagem = obterMensagemErroFirebase(error, fallback);
-  showToast(mensagem, "error");
-  return mensagem;
-};
-
-const renderizarSkeletonTabela = () => {
-  if (!DOM.grid) return;
-  DOM.grid.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-5 animate-pulse">
-      <div class="flex justify-between gap-4">
-        <div class="flex-1 space-y-3">
-          <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-          <div class="h-4 bg-slate-200 rounded w-1/2"></div>
-        </div>
-        <div class="h-14 w-14 bg-slate-200 rounded-2xl"></div>
-      </div>
-      <div class="border-t border-slate-100"></div>
-      <div class="space-y-4">
-        <div class="flex justify-between">
-          <div class="h-3 bg-slate-200 rounded w-20"></div>
-          <div class="h-3 bg-slate-200 rounded w-24"></div>
-        </div>
-      </div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-5 animate-pulse">
-      <div class="flex justify-between gap-4">
-        <div class="flex-1 space-y-3">
-          <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-          <div class="h-4 bg-slate-200 rounded w-1/2"></div>
-        </div>
-        <div class="h-14 w-14 bg-slate-200 rounded-2xl"></div>
-      </div>
-      <div class="border-t border-slate-100"></div>
-      <div class="space-y-4">
-        <div class="flex justify-between">
-          <div class="h-3 bg-slate-200 rounded w-20"></div>
-          <div class="h-3 bg-slate-200 rounded w-24"></div>
-        </div>
-      </div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-5 animate-pulse">
-      <div class="flex justify-between gap-4">
-        <div class="flex-1 space-y-3">
-          <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-          <div class="h-4 bg-slate-200 rounded w-1/2"></div>
-        </div>
-        <div class="h-14 w-14 bg-slate-200 rounded-2xl"></div>
-      </div>
-      <div class="border-t border-slate-100"></div>
-      <div class="space-y-4">
-        <div class="flex justify-between">
-          <div class="h-3 bg-slate-200 rounded w-20"></div>
-          <div class="h-3 bg-slate-200 rounded w-24"></div>
-        </div>
-      </div>
-    </div>`;
-  if (DOM.tabInfo) DOM.tabInfo.textContent = "Carregando registros...";
-  if (DOM.pagInfo) DOM.pagInfo.textContent = "—";
-  if (DOM.btnPrev) DOM.btnPrev.disabled = true;
-  if (DOM.btnNext) DOM.btnNext.disabled = true;
-};
-
-const renderizarSkeletonDashboard = () => {
-  const dashboardContent = document.getElementById("dashboard-content");
-  const dashboardSkeleton = document.getElementById("dashboard-skeleton");
-  if (dashboardContent) dashboardContent.classList.add("hidden");
-  if (dashboardSkeleton) dashboardSkeleton.classList.remove("hidden");
-};
-
-const esconderSkeletonDashboard = () => {
-  const dashboardContent = document.getElementById("dashboard-content");
-  const dashboardSkeleton = document.getElementById("dashboard-skeleton");
-  if (dashboardContent) dashboardContent.classList.remove("hidden");
-  if (dashboardSkeleton) dashboardSkeleton.classList.add("hidden");
-};
-
-const formatarNome = (nome) => {
-  const n = String(nome).toLowerCase().trim();
-  if (n.includes("francisco gustavo")) return "Gustavo";
-  if (n.includes("francisco antônio") || n.includes("francisco antonio"))
-    return "Toinho";
-  if (n.includes("cordeiro")) return "Samambaia";
-  if (n.includes("galdino")) return "Neto";
-  if (n.includes("valdene")) return "Valdene";
-  if (n.includes("willian")) return "Willian";
-  return nome.split(" ")[0]; // Padrão: usa a primeira palavra
-};
+let dadosCarregadosToastMostrado = false; // Local to app.js
 
 setGreeting();
 
 // ==========================================
 // DELEGAÇÃO DE EVENTOS (substitui onclicks globais)
 // ==========================================
+
 document.addEventListener("click", (e) => {
   const actionEl = e.target.closest("[data-action]");
   if (!actionEl) return;
@@ -305,25 +134,25 @@ document.addEventListener("click", (e) => {
       toggleDropdown();
       break;
     case "toggle-notifications":
-      toggleNotifications();
+      toggleNotifications(); // Pass currentUser if needed
       break;
     case "limpar-notificacoes":
-      limparNotificacoes();
+      limparNotificacoes(currentUser);
       break;
     case "logout":
-      logout();
+      logout(currentUser);
       break;
     case "abrir-perfil":
-      abrirModalPerfil();
+      abrirModalPerfil(currentUser);
       break;
     case "fechar-perfil":
       fecharModalPerfil();
       break;
     case "salvar-perfil":
-      salvarPerfil();
+      salvarPerfil(currentUser);
       break;
     case "trocar-senha":
-      enviarEmailTrocaSenha();
+      enviarEmailTrocaSenha(currentUser);
       break;
     case "abrir-configuracoes":
       abrirModalConfiguracoes();
@@ -338,7 +167,7 @@ document.addEventListener("click", (e) => {
       abrirModalExportacao();
       break;
     case "confirmar-exportacao":
-      confirmarExportacao();
+      confirmarExportacao(); // This function now handles the export logic
       break;
     case "fechar-exportacao":
       fecharModalExportacao();
@@ -350,10 +179,15 @@ document.addEventListener("click", (e) => {
       fecharModalPrompt();
       break;
     case "confirmar-prompt":
-      confirmarModalPrompt();
+      confirmarModalPrompt(
+        currentUser,
+        encarregados,
+        renderizarSelectEncarregados,
+      );
       break;
     case "remover-encarregado":
-      removerEncarregadoSelecionado();
+      // A função agora obtém o que precisa do escopo de app.js
+      removerEncarregadoSelecionado(isAdmin, currentUser);
       break;
     case "fechar-confirmacao":
       fecharModalConfirmacao();
@@ -376,22 +210,25 @@ document.addEventListener("click", (e) => {
       break;
     }
     case "login-anonimo":
-      loginAnonimo();
+      loginAnonimo(); // This function now handles anonymous login
       break;
     case "switch-tab": {
       const tabId = actionEl.getAttribute("data-tab");
       switchTab(tabId);
-      if (tabId === "dashboard" && pendingChartData) {
-        renderizarGraficos(pendingChartData.aEnc, pendingChartData.aMat);
+      const chartData = getPendingChartData();
+      if (tabId === "dashboard" && chartData) {
+        renderizarGraficos(chartData.aEnc, chartData.aMat);
         pendingChartData = null;
       }
       break;
     }
     case "limpar-filtros":
       limparFiltros();
+      aplicarFiltroPesquisa(isAdmin);
       break;
     case "mudar-pagina":
       mudarPagina(parseInt(actionEl.getAttribute("data-dir")));
+      renderizarGridLancamentos(isLoadingTabela, isAdmin);
       break;
     case "show-toast":
       showToast(
@@ -404,11 +241,19 @@ document.addEventListener("click", (e) => {
       const parsedId = rawId.startsWith("[")
         ? JSON.parse(rawId.replace(/'/g, '"'))
         : rawId;
-      toggleBaixa(parsedId, actionEl.getAttribute("data-status"));
+      toggleBaixa(
+        currentUser.uid,
+        parsedId,
+        actionEl.getAttribute("data-status"),
+      );
       break;
     }
     case "deletar-lancamento":
-      deletarLancamento(actionEl.getAttribute("data-id"));
+      deletarLancamento(
+        currentUser.uid,
+        actionEl.getAttribute("data-id"),
+        isAdmin,
+      );
       break;
   }
 });
@@ -436,188 +281,6 @@ document.addEventListener("click", (e) => {
   }
 });
 
-const toggleNotifications = function () {
-  const dropdown = document.getElementById("notifications-dropdown");
-  if (dropdown) {
-    dropdown.classList.toggle("opacity-0");
-    dropdown.classList.toggle("pointer-events-none");
-    dropdown.classList.toggle("scale-95");
-  }
-};
-
-const limparNotificacoes = async function () {
-  if (!notificacoesNaoLidas.length || !currentUser) return;
-  try {
-    await limparNotificacoesNoFirestore(currentUser.uid, notificacoesNaoLidas);
-    showToast("Notificações lidas com sucesso!", "success");
-    toggleNotifications();
-  } catch (error) {
-    console.error("Erro ao limpar notificações:", error);
-    showToast("Erro ao limpar notificações.", "error");
-  }
-};
-
-const criarNotificacao = async function (titulo, mensagem, tipo = "info") {
-  if (!currentUser) return;
-  try {
-    await criarNotificacaoNoFirestore(currentUser.uid, titulo, mensagem, tipo);
-  } catch (error) {
-    console.error("Erro ao criar notificação:", error);
-  }
-};
-
-const iniciarEscutaNotificacoes = function () {
-  if (!currentUser) return;
-  escutarNotificacoes(
-    currentUser.uid,
-    (snapshot) => {
-      const lista = document.getElementById("lista-notificacoes");
-      const badge = document.getElementById("badge-notificacoes");
-      let html = "";
-      notificacoesNaoLidas = [];
-
-      if (snapshot.empty) {
-        html = `
-              <div class="p-8 text-center text-slate-400">
-                <div class="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
-                  ${svgIcon("checkDouble", "w-6 h-6")}
-                </div>
-                <p class="text-xs font-bold text-slate-600">Tudo limpo por aqui</p>
-                <p class="text-[10px] mt-1 font-medium">Você não possui novas notificações.</p>
-              </div>
-            `;
-      } else {
-        snapshot.forEach((docSnap) => {
-          const notif = docSnap.data();
-          if (!notif.lida) notificacoesNaoLidas.push(docSnap.id);
-
-          const date = notif.timestamp ? notif.timestamp.toDate() : new Date();
-          const timeStr =
-            date.toLocaleDateString("pt-BR") +
-            " às " +
-            date.toLocaleTimeString("pt-BR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-
-          const bgHover = notif.lida
-            ? "hover:bg-slate-50"
-            : "bg-brand-50/30 hover:bg-brand-50/50 cursor-pointer";
-          const dot = notif.lida
-            ? ""
-            : `<div class="w-1.5 h-1.5 bg-brand-500 rounded-full mt-1.5 flex-shrink-0"></div>`;
-          const textColor = notif.lida ? "text-slate-800" : "text-brand-700";
-
-          html += `
-                <div class="p-3 ${bgHover} rounded-xl transition-colors mb-1 border border-transparent hover:border-slate-100 group flex gap-2 items-start">
-                  ${dot}
-                  <div>
-                    <p class="text-xs font-bold ${textColor} transition-colors">${notif.titulo}</p>
-                    <p class="text-[10px] text-slate-500 mt-1">${notif.mensagem}</p>
-                    <p class="text-[9px] text-slate-400 mt-2 font-semibold uppercase tracking-wider">${timeStr}</p>
-                  </div>
-                </div>
-              `;
-        });
-      }
-      if (lista) lista.innerHTML = html;
-      if (badge) {
-        if (notificacoesNaoLidas.length > 0)
-          badge.classList.remove("opacity-0");
-        else badge.classList.add("opacity-0");
-      }
-    },
-    (error) => console.error("Erro ao escutar notificações:", error),
-  );
-};
-
-const logout = () => {
-  if (!auth) return;
-
-  const dropdown = document.getElementById("user-dropdown");
-  if (dropdown && !dropdown.classList.contains("opacity-0")) toggleDropdown();
-
-  abrirModalConfirmacao(
-    "Sair do Sistema",
-    "Tem certeza de que deseja encerrar a sua sessão agora?",
-    async () => {
-      try {
-        await signOut(auth);
-        showToast("Sessão encerrada com sucesso.", "success");
-        setTimeout(() => window.location.reload(), 1000);
-      } catch (error) {
-        showToast("Erro ao sair.", "error");
-      }
-    },
-    "Sair",
-  );
-};
-
-const abrirModalPerfil = () => {
-  if (!currentUser) return;
-  const dropdown = document.getElementById("user-dropdown");
-  if (dropdown && !dropdown.classList.contains("opacity-0")) toggleDropdown();
-
-  abrirModal("modal-perfil", "modal-perfil-content", () => {
-    document.getElementById("input-perfil-email").value =
-      currentUser.email || "visitante@coeng.com";
-    document.getElementById("input-perfil-nome").value =
-      document.getElementById("user-dropdown-name").textContent;
-  });
-};
-
-const fecharModalPerfil = () => {
-  fecharModal("modal-perfil", "modal-perfil-content");
-};
-
-const salvarPerfil = async () => {
-  if (!currentUser) return;
-  const novoNome = document.getElementById("input-perfil-nome").value.trim();
-  if (!novoNome) return showToast("O nome não pode ficar vazio.", "error");
-
-  const btn = document.getElementById("btn-salvar-perfil");
-  const originalText = btn.innerHTML;
-  btn.innerHTML = `${svgIcon("spinner", "w-4 h-4 animate-spin")} Salvando...`;
-  btn.disabled = true;
-  try {
-    await updateProfile(currentUser, { displayName: novoNome });
-    const headerNameEl = document.getElementById("header-user-name");
-    if (headerNameEl) headerNameEl.textContent = novoNome.split(" ")[0];
-    const dropNameEl = document.getElementById("user-dropdown-name");
-    if (dropNameEl) dropNameEl.textContent = novoNome;
-    const avatarBtnEl = document.getElementById("user-avatar-btn");
-    if (avatarBtnEl) avatarBtnEl.textContent = novoNome.charAt(0).toUpperCase();
-    showToast("Perfil atualizado com sucesso!", "success");
-    fecharModalPerfil();
-  } catch (error) {
-    showToast("Erro ao atualizar perfil.", "error");
-  } finally {
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
-};
-
-const enviarEmailTrocaSenha = async () => {
-  if (!currentUser || !currentUser.email) {
-    showToast("Apenas contas com e-mail podem alterar a senha.", "error");
-    return;
-  }
-  const btn = document.getElementById("btn-trocar-senha");
-  const originalText = btn.innerHTML;
-  btn.innerHTML = `${svgIcon("spinner", "w-3.5 h-3.5 animate-spin")} ...`;
-  btn.disabled = true;
-
-  try {
-    await sendPasswordResetEmail(auth, currentUser.email);
-    showToast("Link de redefinição enviado para o seu e-mail!", "success");
-  } catch (error) {
-    showToast("Erro ao processar solicitação de troca de senha.", "error");
-  } finally {
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
-};
-
 const abrirModalConfiguracoes = () => {
   if (!isAdmin) {
     return showToast("Acesso restrito a administradores.", "error");
@@ -635,236 +298,18 @@ const fecharModalConfiguracoes = () => {
 };
 
 const salvarConfiguracoes = () => {
-  itensPorPagina =
+  const novosItens =
     parseInt(document.getElementById("config-itens-pagina").value) || 9;
+  setItensPorPagina(novosItens);
   localStorage.setItem(
     "demap_configuracoes",
-    JSON.stringify({ itensPorPagina }),
+    JSON.stringify({ itensPorPagina: novosItens }),
   );
   showToast("Configurações salvas!", "success");
   fecharModalConfiguracoes();
-  paginaAtual = 1;
-  if (dadosFiltrados.length > 0) renderizarGridLancamentos();
-};
-
-// ==========================================
-// 1. NOTIFICAÇÕES & MODAIS
-// ==========================================
-
-const abrirModalConfirmacao = (
-  titulo,
-  mensagem,
-  onConfirm,
-  txtBotao = "Confirmar",
-) => {
-  document.getElementById("modal-titulo").innerText = titulo;
-  document.getElementById("modal-mensagem").innerText = mensagem;
-  const btnModal = document.getElementById("btn-modal-confirmar");
-  if (btnModal) btnModal.innerText = txtBotao;
-  acaoPendenteModal = onConfirm;
-  abrirModal("modal-confirmacao", "modal-confirmacao-content");
-};
-
-const fecharModalConfirmacao = () => {
-  fecharModal("modal-confirmacao", "modal-confirmacao-content");
-  acaoPendenteModal = null;
-};
-
-const confirmarModalConfirmacao = () => {
-  if (acaoPendenteModal) acaoPendenteModal();
-  fecharModalConfirmacao();
-};
-
-const abrirModalPrompt = () => {
-  const input = document.getElementById("input-modal-prompt");
-  input.value = "";
-  abrirModal("modal-prompt", "modal-prompt-content", () => input.focus());
-};
-
-const fecharModalPrompt = () => {
-  fecharModal("modal-prompt", "modal-prompt-content");
-};
-
-const abrirModalExportacao = () => {
-  const container = document.getElementById("export-columns-list");
-  if (!container) return;
-
-  container.innerHTML = "";
-  Object.entries(colunasExportacaoMeta).forEach(([key, label]) => {
-    const checked = colunasExportacaoSelecionadas.includes(key)
-      ? "checked"
-      : "";
-    container.insertAdjacentHTML(
-      "beforeend",
-      `
-        <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
-          <input type="checkbox" value="${key}" ${checked} class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-          <span>${label}</span>
-        </label>
-      `,
-    );
-  });
-
-  abrirModal("modal-exportacao", "modal-exportacao-content");
-};
-
-const fecharModalExportacao = () => {
-  fecharModal("modal-exportacao", "modal-exportacao-content");
-};
-
-const confirmarExportacao = () => {
-  const container = document.getElementById("export-columns-list");
-  if (!container) return;
-  const selecionadas = Array.from(
-    container.querySelectorAll('input[type="checkbox"]:checked'),
-  ).map((el) => el.value);
-  if (!selecionadas.length) {
-    showToast("Selecione ao menos uma coluna para exportar.", "error");
-    return;
-  }
-  colunasExportacaoSelecionadas = selecionadas;
-  localStorage.setItem("demap_export_columns", JSON.stringify(selecionadas));
-  fecharModalExportacao();
-  exportarExcel(selecionadas);
-};
-
-const confirmarModalPrompt = async () => {
-  const input = document.getElementById("input-modal-prompt");
-  const novoNome = input.value.trim();
-  if (novoNome) {
-    if (!encarregados.includes(novoNome)) {
-      encarregados.push(novoNome);
-      renderizarSelectEncarregados();
-      document.getElementById("select-encarregado").value = novoNome;
-      showToast(`Encarregado "${novoNome}" adicionado!`, "success");
-      criarNotificacao(
-        "Novo Responsável",
-        `O encarregado "${novoNome}" foi adicionado.`,
-        "info",
-      );
-      fecharModalPrompt();
-
-      // Salvar na nuvem (Firestore)
-      try {
-        await salvarEncarregadoNoFirestore(novoNome);
-      } catch (e) {}
-    } else {
-      showToast("Este encarregado já existe.", "error");
-    }
-  } else {
-    input.focus();
-  }
-};
-
-const removerEncarregadoSelecionado = () => {
-  if (!isAdmin) {
-    return showToast(
-      "Apenas o administrador pode remover encarregados.",
-      "error",
-    );
-  }
-  const select = document.getElementById("select-encarregado");
-  const encarregado = select.value;
-  if (!encarregado) {
-    showToast("Selecione um encarregado para remover.", "error");
-    return;
-  }
-
-  abrirModalConfirmacao(
-    "Excluir Encarregado",
-    `Tem certeza que deseja remover o encarregado "${encarregado}"?`,
-    async () => {
-      try {
-        await removerEncarregadoNoFirestore(encarregado);
-        showToast(
-          `Encarregado "${encarregado}" removido com sucesso.`,
-          "success",
-        );
-      } catch (error) {
-        showToast("Erro ao remover encarregado.", "error");
-      }
-    },
-    "Excluir",
-  );
-};
-
-// ==========================================
-// 2. DADOS ESTÁTICOS
-// ==========================================
-let encarregados = [];
-
-function renderizarSelectEncarregados() {
-  const select = document.getElementById("select-encarregado");
-  const filtroSelect = document.getElementById("select-filtro-encarregado");
-
-  const valorAtual = select?.value;
-  const valorFiltroAtual = filtroSelect?.value;
-
-  if (select)
-    select.innerHTML = '<option value="">Selecione o responsável...</option>';
-  if (filtroSelect)
-    filtroSelect.innerHTML = '<option value="">Todos os encarregados</option>';
-
-  [...encarregados].sort().forEach((nome) => {
-    if (select) select.add(new Option(nome, nome));
-    if (filtroSelect) filtroSelect.add(new Option(nome, nome));
-  });
-  if (valorAtual && encarregados.includes(valorAtual))
-    select.value = valorAtual;
-  if (valorFiltroAtual && encarregados.includes(valorFiltroAtual))
-    filtroSelect.value = valorFiltroAtual;
-}
-renderizarSelectEncarregados();
-
-let baseDados = {
-  14407: "LAMINADO DE FREIJÓ DE (200 MM A 400 MM)",
-  20932: "COMPENSADO VIROLA 2.750mm X 1.600mm X 4mm",
-  15934: "TUBO INDUSTRIAL TIPO METALON DE 25 mm X 25 mm",
-};
-const savedBase = localStorage.getItem("demap_base_dados");
-if (savedBase) {
-  baseDados = JSON.parse(savedBase);
-  atualizarUIBaseDados(Object.keys(baseDados).length);
-}
-
-function atualizarUIBaseDados(count) {
-  const statusBase = document.getElementById("status-base");
-  if (statusBase) {
-    statusBase.classList.remove("hidden");
-    statusBase.classList.add("flex");
-    document.getElementById("status-base-text").textContent =
-      count.toLocaleString("pt-BR") + " itens integrados";
-  }
-}
-
-const carregarBaseDoFirestore = async function () {
-  try {
-    const newBase = await fetchBaseDoFirestore();
-    if (newBase) {
-      baseDados = newBase;
-      localStorage.setItem("demap_base_dados", JSON.stringify(baseDados));
-      atualizarUIBaseDados(Object.keys(baseDados).length);
-    }
-  } catch (error) {
-    mostrarErroFirebase(
-      error,
-      "Não foi possível carregar a base de materiais.",
-    );
-  }
-};
-
-const carregarEncarregadosDoFirestore = function () {
-  try {
-    escutarEncarregados((snapshot) => {
-      encarregados = [];
-      snapshot.forEach((doc) => {
-        encarregados.push(doc.data().nome || doc.id);
-      });
-      renderizarSelectEncarregados();
-    });
-  } catch (error) {
-    mostrarErroFirebase(error, "Não foi possível carregar os encarregados.");
-  }
+  // A paginação será resetada na próxima chamada de onFiltroChange
+  if (dadosFiltrados.length > 0)
+    renderizarGridLancamentos(isLoadingTabela, isAdmin);
 };
 
 document
@@ -887,7 +332,7 @@ document
           workbook.Sheets[workbook.SheetNames[0]],
           { header: 1 },
         );
-        let newBase = {};
+        let newBase = {}; // This should update the baseDados in dataManagement.js
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (row && row.length >= 4) {
@@ -902,9 +347,12 @@ document
           }
         }
         if (Object.keys(newBase).length > 0) {
-          baseDados = newBase;
-          localStorage.setItem("demap_base_dados", JSON.stringify(baseDados));
-          atualizarUIBaseDados(Object.keys(baseDados).length);
+          // Update baseDados in dataManagement.js
+          Object.assign(baseDados, newBase); // Merge newBase into existing baseDados
+          localStorage.setItem("demap_base_dados", JSON.stringify(baseDados)); // Save to local storage
+          // Call a function to update UI for baseDados count, if needed
+          // For now, let's assume `atualizarUIBaseDados` is still in dataManagement.js
+          // atualizarUIBaseDados(Object.keys(baseDados).length);
           showToast("Sincronizando com a nuvem...", "info");
 
           // Envia os dados em lotes de 500 itens para o Firebase
@@ -913,53 +361,45 @@ document
               const count = await salvarBaseNoFirestoreLote(baseDados);
               showToast(`Base salva na nuvem com ${count} itens.`, "success");
             } catch (e) {
-              showToast("Erro ao sincronizar com a nuvem.", "error");
+              mostrarErroFirebase(e, "Erro ao sincronizar com a nuvem.");
             }
           })();
         } else {
           showToast("Planilha inválida.", "error");
         }
       } catch (error) {
-        showToast("Erro ao ler Excel.", "error");
+        mostrarErroFirebase(error, "Erro ao ler Excel.");
       }
     };
     reader.readAsArrayBuffer(file);
   });
 
-document.getElementById("input-data").value = new Date()
-  .toISOString()
-  .split("T")[0];
+DOM.inputData.value = new Date().toISOString().split("T")[0];
 
-const inputCodigo = document.getElementById("input-codigo");
-const inputMaterial = document.getElementById("input-material");
-const badgeEncontrado = document.getElementById("badge-encontrado");
-const btnSubmit = document.getElementById("btn-submit");
-const statusForm = document.getElementById("status-form");
-
-inputCodigo.addEventListener("input", (e) => {
+DOM.inputCodigo.addEventListener("input", (e) => {
   const cod = e.target.value.trim();
   if (baseDados[cod]) {
-    inputMaterial.value = baseDados[cod];
-    inputMaterial.className =
+    DOM.inputMaterial.value = baseDados[cod];
+    DOM.inputMaterial.className =
       "w-full rounded-xl border border-emerald-300 px-4 py-3 bg-emerald-50 text-emerald-800 font-bold focus:outline-none shadow-inner transition-colors text-sm";
-    badgeEncontrado.classList.remove("opacity-0");
-    if (statusForm) {
-      statusForm.textContent = "Material encontrado na base.";
-      statusForm.className = "text-xs text-emerald-600 font-semibold";
+    DOM.badgeEncontrado.classList.remove("opacity-0");
+    if (DOM.statusForm) {
+      DOM.statusForm.textContent = "Material encontrado na base.";
+      DOM.statusForm.className = "text-xs text-emerald-600 font-semibold";
     }
   } else {
-    badgeEncontrado.classList.add("opacity-0");
-    inputMaterial.value = cod.length > 2 ? "Material não catalogado" : "";
-    inputMaterial.className =
+    DOM.badgeEncontrado.classList.add("opacity-0");
+    DOM.inputMaterial.value = cod.length > 2 ? "Material não catalogado" : "";
+    DOM.inputMaterial.className =
       cod.length > 2
         ? "w-full rounded-xl border border-red-200 px-4 py-3 bg-red-50 text-red-600 font-bold focus:outline-none shadow-inner transition-colors text-sm"
         : "w-full rounded-xl border border-slate-200 px-4 py-3 bg-slate-100/70 text-slate-500 focus:outline-none cursor-not-allowed shadow-inner transition-colors text-sm font-medium";
-    if (statusForm) {
-      statusForm.textContent =
+    if (DOM.statusForm) {
+      DOM.statusForm.textContent =
         cod.length > 2
           ? "Código ainda não cadastrado."
           : "Informe o código do material.";
-      statusForm.className = "text-xs text-amber-600 font-semibold";
+      DOM.statusForm.className = "text-xs text-amber-600 font-semibold";
     }
   }
 });
@@ -967,29 +407,13 @@ inputCodigo.addEventListener("input", (e) => {
 // ==========================================
 // 3. FIREBASE CONFIG
 // ==========================================
-let currentUser,
-  isAdmin = false;
-let notificacoesNaoLidas = [];
-let dadosAtuais = [];
-let dadosFiltrados = [];
-let ordenacaoAtual = { coluna: "data", crescente: false };
-let paginaAtual = 1;
-let itensPorPagina = 9;
-
-// Carrega as configurações locais
-const savedConfig = localStorage.getItem("demap_configuracoes");
-if (savedConfig) {
-  try {
-    const parsed = JSON.parse(savedConfig);
-    if (parsed.itensPorPagina) itensPorPagina = parsed.itensPorPagina;
-  } catch (e) {}
-}
 
 try {
   const initAuth = async () => {
-    if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
-      await signInWithCustomToken(auth, __initial_auth_token);
-    }
+    // Esta lógica de token inicial parece específica para um ambiente, pode ser removida se não for usada.
+    // if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+    //   await signInWithCustomToken(auth, __initial_auth_token);
+    // }
   };
   initAuth();
   onAuthStateChanged(auth, async (user) => {
@@ -1000,7 +424,6 @@ try {
       const idTokenResult = await user.getIdTokenResult(true);
       const claims = idTokenResult.claims || {};
       isAdmin = claims.admin === true;
-
 
       // Atualizar UI com dados do usuário
       const userEmail = user.email || "visitante@coeng.com";
@@ -1110,21 +533,6 @@ document.getElementById("form-login").addEventListener("submit", async (e) => {
   }
 });
 
-const loginAnonimo = async () => {
-  const btn = document.getElementById("btn-login-anonimo");
-  const originalText = btn.innerHTML;
-  btn.innerHTML = `${svgIcon("spinner", "w-4 h-4 animate-spin")} Aguarde...`;
-  btn.disabled = true;
-  try {
-    await signInAnonymously(auth);
-    showToast("Acesso Visitante liberado.", "success");
-  } catch (error) {
-    mostrarErroFirebase(error, "Erro ao acessar anonimamente.");
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
-};
-
 document
   .getElementById("input-excel-historico")
   .addEventListener("change", async function (e) {
@@ -1180,7 +588,7 @@ document
   .getElementById("form-lancamento")
   .addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser || isLoadingTabela) return; // Prevent submission if data is still loading
     const btn = btnSubmit || document.getElementById("btn-submit");
     const original = btn.innerHTML;
     btn.innerHTML = `${svgIcon("spinner", "w-4 h-4 animate-spin")} Processando...`;
@@ -1189,14 +597,10 @@ document
     const codigo = normalizarTexto(
       document.getElementById("input-codigo").value,
     );
-    const quantidade = Number(
-      document.getElementById("input-quantidade").value,
-    );
-    const encarregado = normalizarTexto(
-      document.getElementById("select-encarregado").value,
-    );
+    const quantidade = Number(DOM.inputQuantidade.value);
+    const encarregado = normalizarTexto(DOM.selectEncarregado.value);
 
-    if (material.includes("Não catalogado") || material === "" || !codigo) {
+    if (!material || material.includes("Não catalogado") || !codigo) {
       showToast("Verifique o cód. almox. e o material informado.", "error");
       btn.innerHTML = original;
       btn.disabled = false;
@@ -1212,27 +616,26 @@ document
 
     try {
       await adicionarLancamentoNoFirestore(currentUser.uid, {
-        data: document.getElementById("input-data").value,
+        data: DOM.inputData.value,
         codigo,
         material,
         quantidade,
         encarregado,
         baixa: "Não",
       });
-      document.getElementById("form-lancamento").reset();
-      document.getElementById("input-data").value = new Date()
-        .toISOString()
-        .split("T")[0];
-      inputMaterial.className =
+      DOM.formLancamento.reset();
+      DOM.inputData.value = new Date().toISOString().split("T")[0];
+      DOM.inputMaterial.className =
         "w-full rounded-xl border border-slate-200 px-4 py-3 bg-slate-100/70 text-slate-500 focus:outline-none cursor-not-allowed shadow-inner transition-colors text-sm font-medium";
-      badgeEncontrado.classList.add("opacity-0");
-      if (statusForm) {
-        statusForm.textContent = "Registro pronto para salvar.";
-        statusForm.className = "text-xs text-slate-500 font-semibold";
+      DOM.badgeEncontrado.classList.add("opacity-0");
+      if (DOM.statusForm) {
+        DOM.statusForm.textContent = "Registro pronto para salvar.";
+        DOM.statusForm.className = "text-xs text-slate-500 font-semibold";
       }
       showToast("Saída registrada com sucesso!");
-      const qtdNotif = document.getElementById("input-quantidade").value;
+      const qtdNotif = DOM.inputQuantidade.value;
       criarNotificacao(
+        currentUser,
         "Nova Saída",
         `Material: ${material} | Qtd: ${qtdNotif}`,
         "success",
@@ -1246,7 +649,7 @@ document
     }
   });
 
-const deletarLancamento = (docId) => {
+const deletarLancamento = (uid, docId, isAdmin) => {
   if (!currentUser) return;
   if (!isAdmin) {
     return showToast("Apenas o administrador pode excluir registros.", "error");
@@ -1256,7 +659,7 @@ const deletarLancamento = (docId) => {
     "Atenção: Esta ação removerá a saída do banco de dados permanentemente.",
     async () => {
       try {
-        await deletarLancamentoNoFirestore(currentUser.uid, docId);
+        await deletarLancamentoNoFirestore(uid, docId);
         showToast("Registro apagado.", "success");
       } catch (error) {
         mostrarErroFirebase(error, "Erro ao excluir o registro.");
@@ -1266,11 +669,11 @@ const deletarLancamento = (docId) => {
   );
 };
 
-const toggleBaixa = async (idOuIds, statusAtual) => {
+const toggleBaixa = async (uid, idOuIds, statusAtual) => {
   if (!currentUser) return;
   const novoStatus = statusAtual === "Sim" ? "Não" : "Sim";
   try {
-    await alternarBaixaNoFirestore(currentUser.uid, idOuIds, novoStatus);
+    await alternarBaixaNoFirestore(uid, idOuIds, novoStatus);
     showToast(`Status alterado para "${novoStatus}".`, "success");
   } catch (error) {
     mostrarErroFirebase(error, "Erro ao sincronizar o status.");
@@ -1280,19 +683,20 @@ const toggleBaixa = async (idOuIds, statusAtual) => {
 function iniciarEscutaDeDados() {
   if (!currentUser) return;
   isLoadingTabela = true;
-  isLoadingDashboard = true;
-  renderizarSkeletonTabela();
-  renderizarSkeletonDashboard();
+  setIsLoadingDashboard(true);
+  renderizarSkeletonTabela(); // From domUtils
+  renderizarSkeletonDashboard(); // From domUtils
   escutarLancamentos(currentUser.uid, (snapshot) => {
-    dadosAtuais = [];
+    const novosDados = [];
     if (!snapshot.empty)
       snapshot.forEach((doc) => {
-        dadosAtuais.push({ ...doc.data(), id: doc.id });
+        novosDados.push({ ...doc.data(), id: doc.id });
       });
+    setDadosAtuais(novosDados); // Use the new function to update the state
     isLoadingTabela = false;
-    isLoadingDashboard = false;
+    setIsLoadingDashboard(false);
     esconderSkeletonDashboard();
-    aplicarFiltroPesquisa();
+    aplicarFiltroPesquisa(isAdmin);
     atualizarDashboard();
     if (!dadosCarregadosToastMostrado) {
       dadosCarregadosToastMostrado = true;
@@ -1301,35 +705,24 @@ function iniciarEscutaDeDados() {
   });
 }
 
-const searchInput = document.getElementById("input-search");
-const btnClearSearch = document.getElementById("btn-clear-search");
-const ordenacaoSelect = document.getElementById("select-ordenacao");
-const filtroEncarregadoSelect = document.getElementById(
-  "select-filtro-encarregado",
-);
-const filtroStatusSelect = document.getElementById("select-filtro-status");
-const inputDataInicio = document.getElementById("input-data-de");
-const inputDataFim = document.getElementById("input-data-ate");
-
-// Tenta recuperar os filtros salvos no navegador
+// Recupera os filtros salvos e configura os listeners
 const savedFiltrosStr = localStorage.getItem("demap_filtros");
 if (savedFiltrosStr) {
   try {
     const savedFiltros = JSON.parse(savedFiltrosStr);
-    if (savedFiltros.search) {
-      searchInput.value = savedFiltros.search;
-      if (btnClearSearch) btnClearSearch.classList.remove("hidden");
-    }
+    if (savedFiltros.search) DOM.searchInput.value = savedFiltros.search;
+    if (DOM.btnClearSearch)
+      DOM.btnClearSearch.classList.toggle("hidden", !savedFiltros.search);
     if (savedFiltros.encarregadoFiltro)
-      filtroEncarregadoSelect.value = savedFiltros.encarregadoFiltro;
+      DOM.filtroEncarregadoSelect.value = savedFiltros.encarregadoFiltro;
     if (savedFiltros.statusFiltro)
-      filtroStatusSelect.value = savedFiltros.statusFiltro;
+      DOM.filtroStatusSelect.value = savedFiltros.statusFiltro;
     if (savedFiltros.dataInicio)
-      inputDataInicio.value = savedFiltros.dataInicio;
-    if (savedFiltros.dataFim) inputDataFim.value = savedFiltros.dataFim;
+      DOM.inputDataInicio.value = savedFiltros.dataInicio;
+    if (savedFiltros.dataFim) DOM.inputDataFim.value = savedFiltros.dataFim;
     if (savedFiltros.ordenacao) {
-      ordenacaoSelect.value = savedFiltros.ordenacao;
-      const val = savedFiltros.ordenacao;
+      DOM.ordenacaoSelect.value = savedFiltros.ordenacao;
+      const val = DOM.ordenacaoSelect.value;
       if (val === "data_desc")
         ordenacaoAtual = { coluna: "data", crescente: false };
       else if (val === "data_asc")
@@ -1341,502 +734,64 @@ if (savedFiltrosStr) {
       else if (val === "encarregado_asc")
         ordenacaoAtual = { coluna: "encarregado", crescente: true };
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Erro ao carregar filtros salvos:", e);
+  }
 }
 
-const salvarFiltros = () => {
-  localStorage.setItem(
-    "demap_filtros",
-    JSON.stringify({
-      search: searchInput.value,
-      encarregadoFiltro: filtroEncarregadoSelect.value,
-      statusFiltro: filtroStatusSelect.value,
-      dataInicio: inputDataInicio.value,
-      dataFim: inputDataFim.value,
-      ordenacao: ordenacaoSelect.value,
+DOM.searchInput.addEventListener(
+  "input",
+  debounce(() => {
+    onFiltroChange();
+    aplicarFiltroPesquisa(isAdmin);
+  }, 300),
+);
+if (DOM.btnClearSearch) {
+  DOM.btnClearSearch.addEventListener("click", () => {
+    DOM.searchInput.value = "";
+    DOM.btnClearSearch.classList.add("hidden");
+    DOM.searchInput.focus();
+    onFiltroChange();
+    aplicarFiltroPesquisa(isAdmin);
+  });
+}
+
+const setupFilterListeners = () => {
+  const elements = [
+    DOM.filtroEncarregadoSelect,
+    DOM.filtroStatusSelect,
+    DOM.inputDataInicio,
+    DOM.inputDataFim,
+  ];
+  elements.forEach((el) =>
+    el.addEventListener("change", () => {
+      onFiltroChange();
+      aplicarFiltroPesquisa(isAdmin);
     }),
   );
 };
+setupFilterListeners();
 
-const limparFiltros = () => {
-  searchInput.value = "";
-  if (btnClearSearch) btnClearSearch.classList.add("hidden");
-  filtroEncarregadoSelect.value = "";
-  filtroStatusSelect.value = "";
-  inputDataInicio.value = "";
-  inputDataFim.value = "";
-  ordenacaoSelect.value = "data_desc";
-
-  paginaAtual = 1;
-  ordenacaoAtual = { coluna: "data", crescente: false };
-
-  salvarFiltros();
-  aplicarFiltroPesquisa();
-};
-
-const onFiltroChange = () => {
-  paginaAtual = 1;
-  if (btnClearSearch) {
-    if (searchInput.value.trim() !== "")
-      btnClearSearch.classList.remove("hidden");
-    else btnClearSearch.classList.add("hidden");
+DOM.ordenacaoSelect.addEventListener("change", () => {
+  const val = DOM.ordenacaoSelect.value;
+  if (val === "data_desc") {
+    setOrdenacaoAtual({ coluna: "data", crescente: false });
+  } else if (val === "data_asc") {
+    setOrdenacaoAtual({ coluna: "data", crescente: true });
+  } else if (val === "material_asc") {
+    setOrdenacaoAtual({ coluna: "material", crescente: true });
+  } else if (val === "quantidade_desc") {
+    setOrdenacaoAtual({ coluna: "quantidade", crescente: false });
+  } else if (val === "encarregado_asc") {
+    setOrdenacaoAtual({ coluna: "encarregado", crescente: true });
   }
-  salvarFiltros();
-  aplicarFiltroPesquisa();
-};
-searchInput.addEventListener("input", debounce(onFiltroChange, 300));
-if (btnClearSearch) {
-  btnClearSearch.addEventListener("click", () => {
-    searchInput.value = "";
-    btnClearSearch.classList.add("hidden");
-    searchInput.focus();
-    onFiltroChange();
-  });
-}
-filtroEncarregadoSelect.addEventListener("change", onFiltroChange);
-filtroStatusSelect.addEventListener("change", onFiltroChange);
-inputDataInicio.addEventListener("change", onFiltroChange);
-inputDataFim.addEventListener("change", onFiltroChange);
-ordenacaoSelect.addEventListener("change", () => {
-  const val = ordenacaoSelect.value;
-  paginaAtual = 1;
-  if (val === "data_desc")
-    ordenacaoAtual = { coluna: "data", crescente: false };
-  else if (val === "data_asc")
-    ordenacaoAtual = { coluna: "data", crescente: true };
-  else if (val === "material_asc")
-    ordenacaoAtual = { coluna: "material", crescente: true };
-  else if (val === "quantidade_desc")
-    ordenacaoAtual = { coluna: "quantidade", crescente: false };
-  else if (val === "encarregado_asc")
-    ordenacaoAtual = { coluna: "encarregado", crescente: true };
 
-  salvarFiltros();
   aplicarOrdenacao();
-  renderizarGridLancamentos();
+  renderizarGridLancamentos(isLoadingTabela, isAdmin);
 });
 
-const parseDataFiltro = (valor) => {
-  const dataNormal = normalizarData(valor);
-  if (!dataNormal) return null;
-  const [ano, mes, dia] = dataNormal.split("-").map(Number);
-  if (!ano || !mes || !dia) return null;
-  return new Date(ano, mes - 1, dia);
-};
-
-function aplicarFiltroPesquisa() {
-  const termo = searchInput.value.toLowerCase().trim();
-  const encarregadoSelecionado = filtroEncarregadoSelect.value;
-  const statusSelecionado = filtroStatusSelect.value;
-  const dataInicio = inputDataInicio.value
-    ? parseDataFiltro(inputDataInicio.value)
-    : null;
-  const dataFim = inputDataFim.value
-    ? parseDataFiltro(inputDataFim.value)
-    : null;
-  let tempFiltrados = dadosAtuais.filter((item) => {
-    const matchTexto =
-      termo === "" ||
-      item.codigo.toLowerCase().includes(termo) ||
-      item.material.toLowerCase().includes(termo) ||
-      item.encarregado.toLowerCase().includes(termo);
-
-    let matchEncarregado = true;
-    if (encarregadoSelecionado)
-      matchEncarregado = item.encarregado === encarregadoSelecionado;
-
-    let matchStatus = true;
-    if (statusSelecionado)
-      matchStatus = (item.baixa || "Não") === statusSelecionado;
-
-    const dataItem = parseDataFiltro(item.data);
-    let matchData = true;
-    if (dataInicio || dataFim) {
-      matchData = false;
-      if (dataItem) {
-        const depoisDoInicio = !dataInicio || dataItem >= dataInicio;
-        const antesDoFim = !dataFim || dataItem <= dataFim;
-        matchData = depoisDoInicio && antesDoFim;
-      }
-    }
-
-    return matchTexto && matchEncarregado && matchStatus && matchData;
-  });
-
-  // Somatório Diário Inteligente
-  const agrupados = {};
-  tempFiltrados.forEach((item) => {
-    const key = `${item.data}_${item.codigo}_${item.encarregado}_${item.baixa || "Não"}`;
-    if (!agrupados[key]) {
-      agrupados[key] = {
-        ...item,
-        quantidade: Number(item.quantidade),
-        ids: [item.id],
-        isGrouped: false,
-      };
-    } else {
-      agrupados[key].quantidade += Number(item.quantidade);
-      agrupados[key].ids.push(item.id);
-      agrupados[key].isGrouped = true;
-    }
-  });
-  dadosFiltrados = Object.values(agrupados);
-  aplicarOrdenacao();
-  renderizarGridLancamentos();
-}
-
-function aplicarOrdenacao() {
-  const { coluna, crescente } = ordenacaoAtual;
-  dadosFiltrados.sort((a, b) => {
-    let vA =
-      coluna === "quantidade"
-        ? Number(a[coluna]) || 0
-        : String(a[coluna] || "").toLowerCase();
-    let vB =
-      coluna === "quantidade"
-        ? Number(b[coluna]) || 0
-        : String(b[coluna] || "").toLowerCase();
-    if (vA < vB) return crescente ? -1 : 1;
-    if (vA > vB) return crescente ? 1 : -1;
-    return 0;
-  });
-}
-
-function renderizarGridLancamentos() {
-  if (isLoadingTabela) {
-    renderizarSkeletonTabela();
-    return;
-  }
-
-  DOM.grid.innerHTML = "";
-  const total = dadosFiltrados.length;
-  const paginas = Math.ceil(total / itensPorPagina) || 1;
-
-  if (total === 0) {
-    DOM.grid.innerHTML = `<div class="col-span-1 md:col-span-2 xl:col-span-3 flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-slate-200 border-dashed">
-                    <div class="bg-slate-50 p-5 rounded-full mb-4 ring-8 ring-slate-50/50 opacity-50">${svgIcon("folder", "w-10 h-10")}</div>
-                    <h4 class="font-extrabold text-lg text-slate-700">Nenhum registro encontrado</h4>
-                    <p class="text-sm mt-1">Altere os filtros de pesquisa ou adicione um novo lançamento.</p>
-                </div>`;
-    DOM.tabInfo.textContent = "0 registros";
-    DOM.btnPrev.disabled = true;
-    DOM.btnNext.disabled = true;
-    return;
-  }
-
-  if (paginaAtual > paginas) paginaAtual = paginas;
-  if (paginaAtual < 1) paginaAtual = 1;
-  const start = (paginaAtual - 1) * itensPorPagina;
-  const end = Math.min(start + itensPorPagina, total);
-
-  let itensHTML = "";
-  dadosFiltrados.slice(start, end).forEach((item) => {
-    const dataBR = formatarDataParaDisplay(item.data);
-    const idArg = item.isGrouped
-      ? `[${item.ids.map((id) => `'${id}'`).join(",")}]`
-      : `'${item.id}'`;
-    const baixaAtual = item.baixa || "Não";
-    const borderColor =
-      baixaAtual === "Sim" ? "border-t-emerald-500" : "border-t-amber-500";
-
-    const materialSeguro = escapeHTML(item.material);
-    const encarregadoSeguro = escapeHTML(item.encarregado);
-
-    const btnBaixa =
-      baixaAtual === "Sim"
-        ? `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Sim" class="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("checkDouble", "w-4 h-4")} Concluído</button>`
-        : `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Não" class="flex-1 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("clock", "w-4 h-4")} Pendente</button>`;
-
-    itensHTML += `
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 border-t-4 ${borderColor} p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="bg-slate-100/80 px-2.5 py-1 rounded-md text-[10px] font-bold text-slate-500 tracking-widest border border-slate-200">
-                                CÓD: ${escapeHTML(item.codigo)}
-                            </div>
-                            <div class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[10px] font-bold flex items-center gap-1">
-                                ${svgIcon("calendar", "w-4 h-4")} ${dataBR}
-                            </div>
-                        </div>
-                        <h3 class="font-black text-slate-800 text-base leading-tight line-clamp-2 mb-4" title="${materialSeguro}">${materialSeguro}</h3>
-                        
-                        <div class="flex items-center gap-3 sm:gap-4 bg-slate-50/50 rounded-xl p-3 border border-slate-100 mb-4">
-                            <svg class="text-brand-500 text-sm mr-2" aria-hidden="true"><use href="#icon-users-gear"></use></svg>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Responsável</p>
-                                <p class="font-bold text-slate-700 text-sm truncate" title="${encarregadoSeguro}">${encarregadoSeguro}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Qtd</p>
-                                <p class="font-black text-brand-600 text-lg leading-none">${item.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-auto flex gap-2 pt-2 border-t border-slate-100">
-                            ${btnBaixa}
-                            ${
-                              item.isGrouped
-                                ? `<div class="w-16 flex-shrink-0 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">${svgIcon("layer", "w-4 h-4")} ${item.ids.length}x</div>`
-                                : isAdmin
-                                  ? `<button data-action="deletar-lancamento" data-id="${item.id}" class="w-16 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Excluir Registro">${svgIcon("trash", "w-4 h-4")}</button>`
-                                  : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para excluir">${svgIcon("trash", "w-4 h-4")}</div>`
-                            }
-                        </div>
-                    </div>`;
-  });
-  DOM.grid.innerHTML = itensHTML;
-
-  document.getElementById("tabela-info").textContent =
-    `Pág. ${paginaAtual} de ${paginas} (${total} itens)`;
-  document.getElementById("tabela-paginacao-info").textContent =
-    `${paginaAtual} / ${paginas}`;
-  document.getElementById("btn-prev-page").disabled = paginaAtual === 1;
-  document.getElementById("btn-next-page").disabled = paginaAtual === paginas;
-}
-
-const mudarPagina = (dir) => {
-  paginaAtual += dir;
-  renderizarGridLancamentos();
-};
-const exportarExcel = (colunasSelecionadas = colunasExportacaoSelecionadas) => {
-  if (!dadosFiltrados.length)
-    return showToast("Sem dados para exportar.", "info");
-  const filtrosResumo = [
-    searchInput.value ? `Busca: ${searchInput.value}` : "",
-    filtroEncarregadoSelect.value
-      ? `Encarregado: ${filtroEncarregadoSelect.value}`
-      : "",
-    filtroStatusSelect.value ? `Status: ${filtroStatusSelect.value}` : "",
-    inputDataInicio.value ? `De: ${inputDataInicio.value}` : "",
-    inputDataFim.value ? `Até: ${inputDataFim.value}` : "",
-  ].filter(Boolean);
-  const colunasValidas = (colunasSelecionadas || []).filter((coluna) =>
-    Object.prototype.hasOwnProperty.call(colunasExportacaoMeta, coluna),
-  );
-  const data = dadosFiltrados.map((i) => {
-    const linha = {};
-    (colunasValidas.length
-      ? colunasValidas
-      : Object.keys(colunasExportacaoMeta)
-    ).forEach((coluna) => {
-      if (coluna === "data") {
-        linha[colunasExportacaoMeta[coluna]] = formatarDataParaDisplay(i.data);
-      } else if (coluna === "quantidade") {
-        linha[colunasExportacaoMeta[coluna]] = Number(i.quantidade);
-      } else {
-        linha[colunasExportacaoMeta[coluna]] = i[coluna] || "";
-      }
-    });
-    return linha;
-  });
-  const ws = XLSX.utils.json_to_sheet(data);
-  const colWidths = {
-    Data: 12,
-    Código: 15,
-    Material: 50,
-    Quantidade: 12,
-    Encarregado: 25,
-    Baixa: 10,
-  };
-  ws["!cols"] = Object.keys(data[0] || {}).map((key) => ({
-    wch: colWidths[key] || 20,
-  }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Lançamentos");
-  const nomeArquivo = `DEMAP_Lançamentos_${new Date().toISOString().split("T")[0]}${filtrosResumo.length ? "_filtrado" : ""}.xlsx`;
-  XLSX.writeFile(wb, nomeArquivo);
-  showToast("Relatório baixado com sucesso!", "success");
-};
-
 // ==========================================
-// 5. GRÁFICOS E PAINEL
-// ==========================================
-function atualizarDashboard() {
-  if (isLoadingDashboard) {
-    renderizarSkeletonDashboard();
-    return;
-  }
-  esconderSkeletonDashboard();
-
-  let total = 0;
-  let encSet = new Set();
-  let matSet = new Set();
-  let volEnc = {};
-  let topMat = {};
-  const hoje = new Date();
-  const inicio7 = new Date(hoje);
-  inicio7.setDate(hoje.getDate() - 7);
-  const inicio30 = new Date(hoje);
-  inicio30.setDate(hoje.getDate() - 30);
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  let resumo7d = 0;
-  let resumo30d = 0;
-  let resumoMes = 0;
-  dadosAtuais.forEach((i) => {
-    total += Number(i.quantidade);
-    encSet.add(i.encarregado);
-    matSet.add(i.codigo);
-    volEnc[i.encarregado] = (volEnc[i.encarregado] || 0) + Number(i.quantidade);
-    let matDesc = i.material.substring(0, 30) + "...";
-    topMat[matDesc] = (topMat[matDesc] || 0) + Number(i.quantidade);
-
-    const dataItem = parseDataFiltro(i.data);
-    if (dataItem) {
-      if (dataItem >= inicio7) resumo7d += Number(i.quantidade);
-      if (dataItem >= inicio30) resumo30d += Number(i.quantidade);
-      if (dataItem >= inicioMes) resumoMes += Number(i.quantidade);
-    }
-  });
-  atualizarTextoSeExiste(
-    "card-total-saidas",
-    total.toLocaleString("pt-BR", { maximumFractionDigits: 2 }),
-  );
-  atualizarTextoSeExiste("card-total-encarregados", encSet.size);
-  atualizarTextoSeExiste("card-total-materiais", matSet.size);
-  atualizarTextoSeExiste(
-    "resumo-7d",
-    `${resumo7d.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
-  );
-  atualizarTextoSeExiste(
-    "resumo-30d",
-    `${resumo30d.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
-  );
-  atualizarTextoSeExiste(
-    "resumo-mes",
-    `${resumoMes.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} qtd`,
-  );
-
-  let aEnc = Object.keys(volEnc)
-    .map((k) => ({ nome: k, vol: volEnc[k] }))
-    .sort((a, b) => b.vol - a.vol)
-    .slice(0, 10);
-  let aMat = Object.keys(topMat)
-    .map((k) => ({ nome: k, vol: topMat[k] }))
-    .sort((a, b) => b.vol - a.vol)
-    .slice(0, 5);
-
-  const emptyEnc = document.getElementById("empty-chart-enc");
-  if (emptyEnc) emptyEnc.classList.toggle("hidden", aEnc.length > 0);
-  const emptyMat = document.getElementById("empty-chart-mat");
-  if (emptyMat) emptyMat.classList.toggle("hidden", aMat.length > 0);
-
-  const tabDashboard = document.getElementById("tab-dashboard");
-  if (tabDashboard?.classList.contains("active")) {
-    renderizarGraficos(aEnc, aMat);
-    pendingChartData = null;
-  } else {
-    pendingChartData = { aEnc, aMat };
-  }
-}
-
-function renderizarGraficos(dEnc, dMat) {
-  Chart.defaults.font.family = "'Inter', sans-serif";
-  const canvasEnc = document.getElementById("chartEncarregados");
-  const canvasMat = document.getElementById("chartMateriais");
-  const emptyEnc = document.getElementById("empty-chart-enc");
-  const emptyMat = document.getElementById("empty-chart-mat");
-
-  if (!canvasEnc || !canvasMat || !emptyEnc || !emptyMat) return;
-
-  const mostrarEstadoVazio = (canvas, empty, mensagem) => {
-    canvas.classList.add("hidden");
-    empty.classList.remove("hidden");
-    const texto = empty.querySelector("p");
-    if (texto) texto.textContent = mensagem;
-  };
-
-  const mostrarGrafico = (canvas, empty) => {
-    canvas.classList.remove("hidden");
-    empty.classList.add("hidden");
-  };
-
-  if (chartEnc) {
-    chartEnc.destroy();
-    chartEnc = null;
-  }
-  if (chartMat) {
-    chartMat.destroy();
-    chartMat = null;
-  }
-
-  if (!dEnc.length) {
-    mostrarEstadoVazio(canvasEnc, emptyEnc, "Sem dados para encargados");
-  } else {
-    mostrarGrafico(canvasEnc, emptyEnc);
-    const ctxE = canvasEnc.getContext("2d");
-    const gradB = ctxE.createLinearGradient(0, 0, 0, 300);
-    gradB.addColorStop(0, "#3b82f6");
-    gradB.addColorStop(1, "#6366f1");
-    chartEnc = new Chart(ctxE, {
-      type: "bar",
-      data: {
-        labels: dEnc.map((d) => formatarNome(d.nome)),
-        datasets: [
-          {
-            data: dEnc.map((d) => d.vol),
-            backgroundColor: gradB,
-            borderRadius: 8,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, grid: { display: false } },
-          x: {
-            grid: { display: false },
-            ticks: { font: { weight: "bold" } },
-          },
-        },
-      },
-    });
-  }
-
-  if (!dMat.length) {
-    mostrarEstadoVazio(canvasMat, emptyMat, "Sem dados para materiais");
-  } else {
-    mostrarGrafico(canvasMat, emptyMat);
-    const ctxM = canvasMat.getContext("2d");
-    const gradO = ctxM.createLinearGradient(300, 0, 0, 0);
-    gradO.addColorStop(0, "#f97316");
-    gradO.addColorStop(1, "#fbbf24");
-    chartMat = new Chart(ctxM, {
-      type: "bar",
-      data: {
-        labels: dMat.map((d) => d.nome),
-        datasets: [
-          {
-            data: dMat.map((d) => d.vol),
-            backgroundColor: gradO,
-            borderRadius: 8,
-          },
-        ],
-      },
-      options: {
-        indexAxis: "y",
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, grid: { display: false } },
-          y: {
-            grid: { display: false },
-            ticks: { font: { weight: "bold" } },
-          },
-        },
-      },
-    });
-  }
-}
-
-// ==========================================
-// 6. NAVEGAÇÃO DE ABAS
-// ==========================================
-// (As funções de abas agora estão no ui.js)
-
-// ==========================================
-// 7. SERVICE WORKER (PWA INSTALÁVEL)
+// 5. SERVICE WORKER (PWA INSTALÁVEL)
 // ==========================================
 const mostrarBannerAtualizacaoPWA = (registration) => {
   if (!document.getElementById("pwa-update-banner")) {

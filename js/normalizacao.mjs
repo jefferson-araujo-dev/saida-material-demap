@@ -1,4 +1,5 @@
 export const normalizarTexto = (value) => {
+  // Exportar para ser usado em outros módulos
   if (value === null || value === undefined) return "";
   return String(value)
     .replace(/^['"]|['"]$/g, "")
