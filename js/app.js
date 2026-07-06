@@ -1128,10 +1128,7 @@ document
         const workbook = XLSX.read(data, { type: "array" });
         const rows = XLSX.utils.sheet_to_json(
           workbook.Sheets[workbook.SheetNames[0]],
-          {
-            raw: false, // Mantém a tentativa de conversão de tipos
-            dateNF: "dd/mm/yyyy", // Força a formatação de datas para o padrão brasileiro
-          },
+          { raw: false },
         );
         const lancamentosFormatados = [];
         for (let row of rows) {

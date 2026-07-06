@@ -95,6 +95,8 @@ O build gerará a versão otimizada em `dist/` para publicação.
 
 A aplicação está preparada para instalação como app no navegador, com suporte a atualização e uso parcial offline via service worker.
 
+---
+
 ## 📄 Licença
 
 Desenvolvido para uso interno da COENG. Todos os direitos reservados ao contexto do projeto.

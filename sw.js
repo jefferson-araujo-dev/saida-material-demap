@@ -1,4 +1,4 @@
-const CACHE_NAME = "demap-cache-v4";
+const CACHE_NAME = "demap-cache-v3";
 
 const ASSETS_TO_CACHE = [
   "./",
@@ -9,7 +9,7 @@ const ASSETS_TO_CACHE = [
   "./js/firebase.js",
   "./js/ui.js",
   "./js/normalizacao.mjs",
-  "./assets/favicon.svg", // Vite/Vercel will serve this from the root
+  "./assets/favicon.svg",
   "./manifest.json",
 ];
 
@@ -47,25 +47,6 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   // Ignora requisições que não são GET (ex: POST para o Firebase)
   if (event.request.method !== "GET") {
-    return;
-  }
-
-  const url = new URL(event.request.url);
-
-  // Em ambiente de desenvolvimento, ignora as requisições internas do Vite para evitar erros.
-  // Isso permite que o Hot Module Replacement (HMR) funcione corretamente.
-  const isDev = url.hostname === "localhost";
-  if (
-    isDev &&
-    (url.pathname.startsWith("/@vite/") ||
-      url.pathname.startsWith("/node_modules/"))
-  ) {
-    return; // Deixa o navegador lidar com a requisição normalmente.
-  }
-
-  // Ignora requisições para a API do Firebase/Firestore.
-  // Deixa o SDK do Firebase gerenciar seu próprio cache e tempo real.
-  if (url.hostname.includes("firestore.googleapis.com")) {
     return;
   }
 
