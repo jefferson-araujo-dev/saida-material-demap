@@ -1,4 +1,4 @@
-const CACHE_NAME = "demap-cache-v3";
+const CACHE_NAME = "demap-cache-v4";
 
 const ASSETS_TO_CACHE = [
   "./",
@@ -45,8 +45,26 @@ self.addEventListener("message", (event) => {
 
 // Estratégia de cache: Stale-While-Revalidate
 self.addEventListener("fetch", (event) => {
-  // Ignora requisições que não são GET (ex: POST para o Firebase)
+  const url = new URL(event.request.url);
+
+  // Em ambiente de desenvolvimento (localhost), desativa completamente o Service Worker
+  // para o evento 'fetch'. Isso evita qualquer problema de cache com Vite e Firebase.
+  if (url.hostname === "localhost") {
+    return;
+  }
+
+  // IMPORTANT: Only cache GET requests.
   if (event.request.method !== "GET") {
+    return;
+  }
+
+  // IMPORTANT: Do not cache any requests to Google's APIs.
+  // This ensures that Firebase Authentication and Firestore can work in real-time
+  // without interference from a stale cache.
+  if (
+    url.hostname.includes("google.com") ||
+    url.hostname.includes("googleapis.com")
+  ) {
     return;
   }
 

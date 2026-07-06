@@ -992,9 +992,15 @@ try {
     }
   };
   initAuth();
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
+
+      // Força a atualização do token para garantir que as custom claims (ex: admin) sejam carregadas.
+      const idTokenResult = await user.getIdTokenResult(true);
+      const claims = idTokenResult.claims || {};
+      isAdmin = claims.admin === true;
+
 
       // Atualizar UI com dados do usuário
       const userEmail = user.email || "visitante@coeng.com";
@@ -1006,20 +1012,14 @@ try {
       let roleClass =
         "text-xs text-blue-600 font-bold bg-blue-50 inline-block px-2 py-0.5 rounded-md mt-0.5";
 
-      if (userEmail.toLowerCase() === "jeffin.araujo.1990@gmail.com") {
-        userNamePart = "Jefferson";
-        fullName = "Jefferson de Araújo Silva";
+      if (isAdmin) {
         roleName = "Administrador";
         roleClass =
           "text-xs text-brand-600 font-bold bg-brand-50 inline-block px-2 py-0.5 rounded-md mt-0.5";
-        isAdmin = true;
       } else if (!user.email) {
         roleName = "Visitante";
         roleClass =
           "text-xs text-slate-500 font-bold bg-slate-100 inline-block px-2 py-0.5 rounded-md mt-0.5";
-        isAdmin = false;
-      } else {
-        isAdmin = false;
       }
       const displayNameHeader = user.displayName
         ? user.displayName.split(" ")[0]
@@ -1062,10 +1062,9 @@ try {
         loginScreen.classList.add("opacity-0");
         setTimeout(() => loginScreen.classList.add("hidden"), 500);
       }
-      iniciarEscutaNotificacoes();
-      carregarBaseDoFirestore();
-      carregarEncarregadosDoFirestore();
-      iniciarEscutaDeDados();
+
+      // 3. Somente agora, com as permissões confirmadas, inicia a escuta dos dados.
+      inicializarListenersDeDados();
     } else {
       const loginScreen = document.getElementById("login-screen");
       if (loginScreen) {
@@ -1076,6 +1075,17 @@ try {
   });
 } catch (error) {
   mostrarErroFirebase(error, "Falha de conexão com a nuvem.");
+}
+
+/**
+ * Inicia todos os listeners do Firestore após a autenticação e verificação de permissões.
+ */
+function inicializarListenersDeDados() {
+  if (!currentUser) return;
+  iniciarEscutaNotificacoes();
+  carregarBaseDoFirestore();
+  carregarEncarregadosDoFirestore();
+  iniciarEscutaDeDados();
 }
 
 // Lógica do formulário de acesso
