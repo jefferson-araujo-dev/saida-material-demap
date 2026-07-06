@@ -58,7 +58,13 @@ npm install
 
 ### 2. Configure o Firebase
 
-Edite o arquivo [js/firebase.js](js/firebase.js) e substitua o objeto `firebaseConfig` pelas credenciais do seu projeto no Firebase Console.
+Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais do Firebase. Use o arquivo `.env.example` (se existir) como modelo ou a estrutura abaixo:
+
+```
+VITE_FIREBASE_API_KEY="SUA_API_KEY"
+VITE_FIREBASE_AUTH_DOMAIN="SEU_AUTH_DOMAIN"
+... (e as outras chaves)
+```
 
 Certifique-se de habilitar:
 

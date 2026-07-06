@@ -43,10 +43,28 @@ self.addEventListener("message", (event) => {
   }
 });
 
+// Estratégia de cache: Stale-While-Revalidate
 self.addEventListener("fetch", (event) => {
+  // Ignora requisições que não são GET (ex: POST para o Firebase)
+  if (event.request.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
-    caches
-      .match(event.request)
-      .then((response) => response || fetch(event.request)),
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cachedResponse = await cache.match(event.request);
+
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // Se a requisição for bem-sucedida, atualiza o cache com a nova versão
+        if (networkResponse.ok) {
+          cache.put(event.request, networkResponse.clone());
+        }
+        return networkResponse;
+      });
+
+      // Retorna a resposta do cache imediatamente se existir, senão aguarda a rede.
+      // A requisição de rede acontece em paralelo para atualizar o cache.
+      return cachedResponse || fetchPromise;
+    }),
   );
 });
