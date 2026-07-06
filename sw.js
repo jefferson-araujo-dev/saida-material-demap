@@ -43,6 +43,7 @@ self.addEventListener("message", (event) => {
   }
 });
 
+<<<<<<< HEAD
 // Estratégia de cache: Stale-While-Revalidate
 self.addEventListener("fetch", (event) => {
   // Ignora requisições que não são GET (ex: POST para o Firebase)
@@ -66,5 +67,12 @@ self.addEventListener("fetch", (event) => {
       // A requisição de rede acontece em paralelo para atualizar o cache.
       return cachedResponse || fetchPromise;
     }),
+=======
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches
+      .match(event.request)
+      .then((response) => response || fetch(event.request)),
+>>>>>>> 24d2cb891fc548c14a2e39aedda9bc6f613aead5
   );
 });
