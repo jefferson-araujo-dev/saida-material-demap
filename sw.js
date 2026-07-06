@@ -9,7 +9,7 @@ const ASSETS_TO_CACHE = [
   "./js/firebase.js",
   "./js/ui.js",
   "./js/normalizacao.mjs",
-  "./assets/favicon.svg",
+  "./assets/favicon.svg", // Vite/Vercel will serve this from the root
   "./manifest.json",
 ];
 
@@ -61,6 +61,12 @@ self.addEventListener("fetch", (event) => {
       url.pathname.startsWith("/node_modules/"))
   ) {
     return; // Deixa o navegador lidar com a requisição normalmente.
+  }
+
+  // Ignora requisições para a API do Firebase/Firestore.
+  // Deixa o SDK do Firebase gerenciar seu próprio cache e tempo real.
+  if (url.hostname.includes("firestore.googleapis.com")) {
+    return;
   }
 
   event.respondWith(
