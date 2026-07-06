@@ -43,12 +43,24 @@ self.addEventListener("message", (event) => {
   }
 });
 
-<<<<<<< HEAD
 // Estratégia de cache: Stale-While-Revalidate
 self.addEventListener("fetch", (event) => {
   // Ignora requisições que não são GET (ex: POST para o Firebase)
   if (event.request.method !== "GET") {
     return;
+  }
+
+  const url = new URL(event.request.url);
+
+  // Em ambiente de desenvolvimento, ignora as requisições internas do Vite para evitar erros.
+  // Isso permite que o Hot Module Replacement (HMR) funcione corretamente.
+  const isDev = url.hostname === "localhost";
+  if (
+    isDev &&
+    (url.pathname.startsWith("/@vite/") ||
+      url.pathname.startsWith("/node_modules/"))
+  ) {
+    return; // Deixa o navegador lidar com a requisição normalmente.
   }
 
   event.respondWith(
@@ -67,12 +79,5 @@ self.addEventListener("fetch", (event) => {
       // A requisição de rede acontece em paralelo para atualizar o cache.
       return cachedResponse || fetchPromise;
     }),
-=======
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches
-      .match(event.request)
-      .then((response) => response || fetch(event.request)),
->>>>>>> 24d2cb891fc548c14a2e39aedda9bc6f613aead5
   );
 });
