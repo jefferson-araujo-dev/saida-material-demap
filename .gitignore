@@ -1,7 +1,8 @@
 .vercel
 node_modules
-<<<<<<< HEAD
 .env
 dist/
-=======
->>>>>>> 24d2cb891fc548c14a2e39aedda9bc6f613aead5
+
+# Arquivos sensíveis que não devem ser versionados
+saida-demap-firebase-admin.json
+setAdmin.js
