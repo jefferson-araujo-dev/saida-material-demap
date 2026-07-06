@@ -2,7 +2,7 @@
   "name": "Gestão de Materiais | COENG",
   "short_name": "Estoque Demap",
   "description": "Sistema de gestão de materiais e saídas do DEMAP.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#0f172a",
