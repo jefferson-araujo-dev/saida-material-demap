@@ -1,1 +1,197 @@
-export const SVG_ICONS={check:'<path d="M5 12.5 9.5 17 19 7.5" />',xmark:'<path d="M6 6 18 18M18 6 6 18" />',info:'<circle cx="12" cy="12" r="8" /><path d="M12 10v4" /><path d="M12 16h.01" />',spinner:'<path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 3v4" />',folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.2a1.5 1.5 0 0 1 1.06.44l1.48 1.48A1.5 1.5 0 0 0 12.3 7.5H18.5A2.5 2.5 0 0 1 21 10v6.5A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z" />',checkDouble:'<path d="m4 12 5 5L20 6" /><path d="m9 17 10-11" />',clock:'<circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 2.5" />',calendar:'<rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" />',userTie:'<path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /><path d="M4 21a4 4 0 0 1 8 0" /><path d="M18 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M15 21a4 4 0 0 1 6 0" />',usersGear:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />',layer:'<path d="m12 3 8 4-8 4-8-4 8-4Z" /><path d="m4 12 8 4 8-4" /><path d="m4 16 8 4 8-4" />',trash:'<path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M7 7l1 12h8l1-12" />',bars:'<path d="M4 7h16M4 12h16M4 17h16" />',plus:'<path d="M12 5v14M5 12h14" />',triangle:'<path d="M12 4 3 19h18L12 4Z" /><path d="M12 9v4" /><path d="M12 15h.01" />',chart:'<path d="M4 19h16" /><path d="M7 16V9" /><path d="M12 16V5" /><path d="M17 16v-3" />',chartBar:'<path d="M4 19h16" /><path d="M7 15V9" /><path d="M12 15V5" /><path d="M17 15v-7" />',database:'<path d="M12 3c4.4 0 8 1.8 8 4s-3.6 4-8 4-8-1.8-8-4 3.6-4 8-4Z" /><path d="M4 7v10c0 2.2 3.6 4 8 4s8-1.8 8-4V7" /><path d="M4 12c0 2.2 3.6 4 8 4s8-1.8 8-4" />',import:'<path d="M12 3v10" /><path d="M8 9l4 4 4-4" /><path d="M5 15v3h14v-3" />',chevronLeft:'<path d="m15 18-6-6 6-6" />',chevronRight:'<path d="m9 6 6 6-6 6" />',search:'<circle cx="11" cy="11" r="6" /><path d="m20 20-4.2-4.2" />',excel:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4M9.5 11.5 14.5 17.5M14.5 11.5 9.5 17.5" />',user:'<path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /><path d="M20 21a8 8 0 0 0-16 0" />',logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />',bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />',gear:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />'};export function svgIcon(t,e="w-4 h-4",a=""){return`<svg class="${e}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${a}>${SVG_ICONS[t]||""}</svg>`}export const setGreeting=()=>{const t=(new Date).getHours(),e=document.getElementById("page-greeting");e&&(e.textContent=t<12?"Bom dia. Pronto para otimizar as movimentações de hoje?":t<18?"Boa tarde. Acompanhe as saídas de materiais em tempo real.":"Boa noite. O fechamento diário dos lançamentos está consolidado.")};export function toggleSidebar(){document.getElementById("sidebar").classList.toggle("-translate-x-full"),document.getElementById("sidebar-overlay").classList.toggle("opacity-0"),document.getElementById("sidebar-overlay").classList.toggle("pointer-events-none")}export function closeSidebarOnMobile(){window.innerWidth<1024&&(document.getElementById("sidebar").classList.add("-translate-x-full"),document.getElementById("sidebar-overlay").classList.add("opacity-0","pointer-events-none"))}export function toggleDropdown(){const t=document.getElementById("user-dropdown");t&&(t.classList.toggle("opacity-0"),t.classList.toggle("pointer-events-none"),t.classList.toggle("scale-95"))}export function showToast(t,e="success"){const a=document.getElementById("toast-container"),d=document.createElement("div"),n={success:`<div class="bg-emerald-100 p-2 rounded-full text-emerald-600">${svgIcon("check","w-4 h-4")}</div>`,error:`<div class="bg-red-100 p-2 rounded-full text-red-600">${svgIcon("xmark","w-4 h-4")}</div>`,info:`<div class="bg-brand-100 p-2 rounded-full text-brand-600">${svgIcon("info","w-4 h-4")}</div>`};d.className=`toast ${e}`,d.innerHTML=`${n[e]||n.info} <span class="font-bold text-sm tracking-wide text-slate-700">${t}</span><div class="toast-progress"></div>`,a.appendChild(d),setTimeout(()=>{d.style.transform="translateY(20px)",d.style.opacity="0",setTimeout(()=>d.remove(),400)},3e3)}export function switchTab(t){document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active")),["dashboard","lancamentos"].forEach(t=>{document.getElementById("btn-"+t).classList.remove("bg-brand-600/15","text-brand-400","border-brand-500"),document.getElementById("btn-"+t).classList.add("hover:bg-slate-800","text-slate-400","border-transparent")}),document.getElementById("tab-"+t).classList.add("active"),document.getElementById("btn-"+t).classList.remove("hover:bg-slate-800","text-slate-400","border-transparent"),document.getElementById("btn-"+t).classList.add("bg-brand-600/15","text-brand-400","border-brand-500");const e={dashboard:"Painel Gerencial",lancamentos:"Controle de Lançamentos"},a=document.getElementById("page-title");a&&e[t]&&(a.innerText=e[t]),closeSidebarOnMobile()}
+/**
+ * @file Módulo de utilitários de interface (UI).
+ * Contém funções para manipulação de DOM, componentes visuais e interações do usuário.
+ */
+
+// ==========================================
+// 1. CONSTANTES E CONFIGURAÇÕES
+// ==========================================
+
+const SVG_ICONS = {
+  check: '<path d="m20 6-11 11-4-4" />',
+  xmark: '<path d="M18 6 6 18M6 6l12 12" />',
+  info: '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
+  spinner: '<path d="M21 12a9 9 0 1 1-6.219-8.56" />',
+  folder:
+    '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z" />',
+  checkDouble:
+    '<path d="m18 6-7.5 7.5L7 10" /><path d="m22 10-7.5 7.5L13 16" />',
+  clock:
+    '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
+  calendar:
+    '<rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" />',
+  userTie:
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />',
+  usersGear:
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
+  layer:
+    '<polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />',
+  trash:
+    '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
+  bars: '<line x1="4" x2="20" y1="12" /><line x1="4" x2="20" y1="6" /><line x1="4" x2="20" y1="18" />',
+  plus: '<line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" />',
+};
+
+const PAGE_TITLES = {
+  dashboard: "Painel Gerencial",
+  lancamentos: "Controle de Lançamentos",
+};
+
+// ==========================================
+// 2. RENDERIZAÇÃO DE COMPONENTES
+// ==========================================
+
+/**
+ * Gera o markup SVG para um ícone.
+ * @param {string} name - O nome do ícone (chave em SVG_ICONS).
+ * @param {string} [classes="w-4 h-4"] - Classes CSS para o elemento SVG.
+ * @param {string} [attrs=""] - Atributos adicionais para o elemento SVG.
+ * @returns {string} O HTML do SVG.
+ */
+export function svgIcon(name, classes = "w-4 h-4", attrs = "") {
+  const iconPath = SVG_ICONS[name] || "";
+  return `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${attrs}>${iconPath}</svg>`;
+}
+
+// ==========================================
+// 3. MANIPULAÇÃO DE ESTADO DA UI
+// ==========================================
+
+/**
+ * Define a mensagem de saudação no cabeçalho com base na hora do dia.
+ */
+export const setGreeting = () => {
+  const hour = new Date().getHours();
+  const greetingElement = document.getElementById("page-greeting");
+  if (!greetingElement) return;
+
+  let message;
+  if (hour < 12) {
+    message = "Bom dia. Pronto para otimizar as movimentações de hoje?";
+  } else if (hour < 18) {
+    message = "Boa tarde. Acompanhe as saídas de materiais em tempo real.";
+  } else {
+    message =
+      "Boa noite. O fechamento diário dos lançamentos está consolidado.";
+  }
+  greetingElement.textContent = message;
+};
+
+// ==========================================
+// 4. COMPONENTES INTERATIVOS
+// ==========================================
+
+/**
+ * Alterna a visibilidade da barra lateral e da sobreposição.
+ */
+export function toggleSidebar() {
+  document.getElementById("sidebar")?.classList.toggle("-translate-x-full");
+  const overlay = document.getElementById("sidebar-overlay");
+  overlay?.classList.toggle("opacity-0");
+  overlay?.classList.toggle("pointer-events-none");
+}
+
+/**
+ * Fecha a barra lateral se a tela for de um dispositivo móvel.
+ */
+export function closeSidebarOnMobile() {
+  if (window.innerWidth < 1024) {
+    document.getElementById("sidebar")?.classList.add("-translate-x-full");
+    document
+      .getElementById("sidebar-overlay")
+      ?.classList.add("opacity-0", "pointer-events-none");
+  }
+}
+
+/**
+ * Alterna a visibilidade do menu suspenso do usuário.
+ */
+export function toggleDropdown() {
+  const dropdown = document.getElementById("user-dropdown");
+  if (dropdown) {
+    dropdown.classList.toggle("opacity-0");
+    dropdown.classList.toggle("pointer-events-none");
+    dropdown.classList.toggle("scale-95");
+  }
+}
+
+/**
+ * Exibe uma notificação (toast) na tela.
+ * @param {string} message - A mensagem a ser exibida.
+ * @param {'success'|'error'|'info'} [type='success'] - O tipo de toast.
+ */
+export function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  const icons = {
+    success: `<div class="bg-emerald-100 p-2 rounded-full text-emerald-600">${svgIcon("check")}</div>`,
+    error: `<div class="bg-red-100 p-2 rounded-full text-red-600">${svgIcon("xmark")}</div>`,
+    info: `<div class="bg-brand-100 p-2 rounded-full text-brand-600">${svgIcon("info")}</div>`,
+  };
+
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    ${icons[type] || icons.info}
+    <span class="font-bold text-sm tracking-wide text-slate-700">${message}</span>
+    <div class="toast-progress"></div>
+  `;
+
+  container.appendChild(toast);
+
+  // Animação de remoção
+  setTimeout(() => {
+    toast.style.transform = "translateY(20px)";
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
+
+/**
+ * Alterna entre as abas da aplicação (Dashboard e Lançamentos).
+ * @param {string} tabId - O ID da aba para ativar ('dashboard' ou 'lancamentos').
+ */
+export function switchTab(tabId) {
+  // Esconde todos os conteúdos de aba
+  document
+    .querySelectorAll(".tab-content")
+    .forEach((tab) => tab.classList.remove("active"));
+
+  // Reseta o estilo de todos os botões de aba
+  Object.keys(PAGE_TITLES).forEach((id) => {
+    const btn = document.getElementById(`btn-${id}`);
+    btn?.classList.remove(
+      "bg-brand-600/15",
+      "text-brand-400",
+      "border-brand-500",
+    );
+    btn?.classList.add(
+      "hover:bg-slate-800",
+      "text-slate-400",
+      "border-transparent",
+    );
+  });
+
+  // Ativa a aba e o botão selecionados
+  document.getElementById(`tab-${tabId}`)?.classList.add("active");
+  const activeBtn = document.getElementById(`btn-${tabId}`);
+  activeBtn?.classList.remove(
+    "hover:bg-slate-800",
+    "text-slate-400",
+    "border-transparent",
+  );
+  activeBtn?.classList.add(
+    "bg-brand-600/15",
+    "text-brand-400",
+    "border-brand-500",
+  );
+
+  // Atualiza o título da página
+  const pageTitleEl = document.getElementById("page-title");
+  if (pageTitleEl && PAGE_TITLES[tabId]) {
+    pageTitleEl.innerText = PAGE_TITLES[tabId];
+  }
+
+  closeSidebarOnMobile();
+}
