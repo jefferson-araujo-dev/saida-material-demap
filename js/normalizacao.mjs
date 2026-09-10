@@ -5,6 +5,15 @@ export const normalizarTexto = (value) => {
     .trim();
 };
 
+// Formata um objeto Date no fuso local como YYYY-MM-DD.
+// Usar toISOString() aqui converteria para UTC e poderia deslocar a data em um dia.
+const formatarDataLocal = (data) => {
+  const ano = data.getFullYear();
+  const mes = `${data.getMonth() + 1}`.padStart(2, "0");
+  const dia = `${data.getDate()}`.padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+};
+
 export const normalizarData = (value) => {
   const texto = normalizarTexto(value);
   if (!texto) return "";
@@ -21,16 +30,13 @@ export const normalizarData = (value) => {
     );
 
     if (!Number.isNaN(possivelData.getTime())) {
-      const ano = possivelData.getFullYear();
-      const mes = `${possivelData.getMonth() + 1}`.padStart(2, "0");
-      const dia = `${possivelData.getDate()}`.padStart(2, "0");
-      return `${ano}-${mes}-${dia}`;
+      return formatarDataLocal(possivelData);
     }
   }
 
   const data = new Date(texto);
   if (!Number.isNaN(data.getTime())) {
-    return data.toISOString().slice(0, 10);
+    return formatarDataLocal(data);
   }
 
   return texto;

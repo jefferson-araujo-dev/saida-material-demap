@@ -4,8 +4,8 @@ import {
   addDoc,
   onSnapshot,
   deleteDoc,
-  where, // Adicionado para filtrar documentos excluídos
   doc,
+  getDoc,
   serverTimestamp,
   writeBatch,
   updateDoc,
@@ -71,6 +71,21 @@ export const escutarEncarregados = (callback) => {
   );
 };
 
+// Doc leve com metadados da base de materiais (contagem + última atualização).
+// Permite ao cliente decidir se precisa rebaixar a coleção inteira.
+const baseMetaRef = () =>
+  doc(db, "artifacts", appId, "materiais_meta", "version");
+
+export const fetchBaseMetaDoFirestore = async () => {
+  const snap = await getDoc(baseMetaRef());
+  if (!snap.exists()) return null;
+  const dados = snap.data() || {};
+  return {
+    count: dados.count || 0,
+    updatedAtMs: dados.updatedAt?.toMillis ? dados.updatedAt.toMillis() : 0,
+  };
+};
+
 export const fetchBaseDoFirestore = async () => {
   const snap = await getDocs(collection(db, "artifacts", appId, "materiais"));
   let base = {};
@@ -90,6 +105,10 @@ export const salvarBaseNoFirestoreLote = async (baseDados) => {
     });
     await batch.commit();
   }
+  await setDoc(baseMetaRef(), {
+    count: keys.length,
+    updatedAt: serverTimestamp(),
+  });
   return keys.length;
 };
 
@@ -228,14 +247,20 @@ export const salvarLancamentosEmLote = async (
   return lancamentos.length;
 };
 
-export const escutarLancamentos = (uid, callback) => {
+// Janela padrão de registros carregados pelo listener em tempo real.
+// Mantém o custo de leitura e o uso de memória limitados mesmo com a coleção crescendo.
+export const LIMITE_LANCAMENTOS_PADRAO = 500;
+
+// Retorna os N lançamentos mais recentes. O filtro de soft-delete (campo `deleted`)
+// é aplicado no cliente para não exigir índice composto e para não esconder
+// documentos legados criados antes desse campo existir.
+export const escutarLancamentos = (
+  uid,
+  callback,
+  limite = LIMITE_LANCAMENTOS_PADRAO,
+) => {
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
-  // Filtra documentos que não foram marcados como excluídos
-  const q = query(
-    ref,
-    where("deleted", "==", false),
-    orderBy("createdAt", "desc"), // Alterado de "timestamp" para "createdAt"
-  );
+  const q = query(ref, orderBy("createdAt", "desc"), limit(limite));
   return onSnapshot(q, callback, (error) =>
     console.error("Erro escutando lançamentos", error),
   );

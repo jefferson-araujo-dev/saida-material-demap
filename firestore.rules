@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore para "Gestão de Materiais | COENG".
+//
+// Modelo de dados (ver js/database.js):
+//   /artifacts/{appId}/users/{uid}/lancamentos/{id}
+//   /artifacts/{appId}/users/{uid}/notificacoes/{id}
+//   /artifacts/{appId}/materiais/{codigo}
+//   /artifacts/{appId}/materiais_meta/{doc}
+//   /artifacts/{appId}/encarregados/{nome}
+//
+// A checagem de administrador usa a Custom Claim `admin: true` no token,
+// definida pelo Firebase Admin SDK (ver README). O mesmo critério é usado no
+// cliente (js/app.js).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    match /artifacts/{appId} {
+
+      // ---- Lançamentos: cada usuário só acessa a própria subárvore ----
+      match /users/{uid}/lancamentos/{lancamentoId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.quantidade is number
+          && request.resource.data.quantidade > 0
+          && request.resource.data.codigo is string
+          && request.resource.data.deleted == false;
+        // Edição, baixa e soft-delete (nunca hard-delete pelo cliente).
+        allow update: if isOwner(uid);
+        allow delete: if false;
+      }
+
+      // ---- Notificações: privadas do usuário ----
+      match /users/{uid}/notificacoes/{notificacaoId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ---- Base de materiais: leitura para autenticados, escrita só admin ----
+      match /materiais/{codigo} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+      }
+
+      match /materiais_meta/{doc} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+      }
+
+      // ---- Encarregados: qualquer autenticado cria; só admin altera/remove ----
+      match /encarregados/{nome} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Nega tudo que não foi explicitamente liberado acima.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
