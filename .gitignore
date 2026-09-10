@@ -4,5 +4,8 @@ node_modules
 # Ignorar pasta de build
 dist
 
+# CSS gerado pelo Tailwind (rode "npm run build:css")
+css/output.css
+
 # Ignorar arquivos de variáveis de ambiente que contêm segredos.
 .env.local
