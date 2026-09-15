@@ -896,6 +896,9 @@
     <!-- Modais -->
     <div
       id="modal-confirmacao"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-titulo"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -937,6 +940,9 @@
 
     <div
       id="modal-prompt"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Novo Encarregado"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -985,6 +991,9 @@
 
     <div
       id="modal-perfil"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Meu Perfil"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1075,6 +1084,9 @@
 
     <div
       id="modal-configuracoes"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configurações"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1132,6 +1144,9 @@
 
     <div
       id="modal-exportacao"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Personalizar exportação"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1178,6 +1193,9 @@
 
     <div
       id="modal-edicao"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Editar Lançamento"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1999,6 +2017,7 @@
                   </svg>
                   <select
                     id="select-filtro-encarregado"
+                    aria-label="Filtrar por responsável"
                     class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   ></select>
                 </div>
@@ -2010,6 +2029,7 @@
                   </svg>
                   <select
                     id="select-filtro-status"
+                    aria-label="Filtrar por status"
                     class="block w-full xl:w-36 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   >
                     <option value="">Todos os status</option>
@@ -2051,6 +2071,7 @@
                   </svg>
                   <select
                     id="select-ordenacao"
+                    aria-label="Ordenar lançamentos"
                     class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   >
                     <option value="data_desc">Mais recentes</option>
