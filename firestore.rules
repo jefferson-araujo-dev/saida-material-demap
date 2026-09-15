@@ -39,7 +39,10 @@ service cloud.firestore {
           && request.resource.data.codigo is string
           && request.resource.data.deleted == false;
         // Edição, baixa e soft-delete (nunca hard-delete pelo cliente).
-        allow update: if isOwner(uid);
+        allow update: if isOwner(uid)
+          && request.resource.data.quantidade is number
+          && request.resource.data.quantidade > 0
+          && request.resource.data.codigo is string;
         allow delete: if false;
       }
 
