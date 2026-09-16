@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Definidos aqui (CSS puro) em vez de só na config do Tailwind: as classes
+   que usam essas animações (.tab-content.active, .toast, .toast-progress)
+   não batem com o padrão que o content-scan do Tailwind procura para saber
+   quais utilitários gerar, então os @keyframes correspondentes nunca eram
+   emitidos e as animações simplesmente não rodavam. */
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastProgress {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -363,7 +381,7 @@
         left: 0;
         height: 3px;
         background: currentColor;
-        animation: toast-progress 3s linear forwards;
+        animation: toastProgress 3s linear forwards;
       }
       .toast.success {
         border-left: 4px solid #10b981;
