@@ -36,11 +36,21 @@ Aplicação web progressiva (PWA) para controle de saídas de materiais em almox
 ├── css/
 │   └── output.css        # CSS gerado pelo Tailwind
 ├── js/
-│   ├── app.js            # Lógica principal da aplicação
-│   ├── database.js       # Integrações com Firebase
+│   ├── app.js            # Ponto de entrada: liga os módulos e a delegação de eventos
+│   ├── auth.js           # Login, logout e perfil do usuário
+│   ├── base.js           # Base de materiais (código → nome)
+│   ├── dashboard.js      # Cartões-resumo e gráficos do painel
+│   ├── database.js       # Integrações com Firebase (Firestore)
+│   ├── encarregados.js   # Lista de responsáveis pelas saídas
 │   ├── firebase.js       # Configuração do Firebase
+│   ├── lancamentos.js    # CRUD, grade, filtros, paginação e exportação
+│   ├── modal.js          # Abrir/fechar modal, confirmação e prompt genéricos
 │   ├── normalizacao.mjs  # Normalização de dados importados
-│   └── ui.js             # Componentes de interface e utilidades visuais
+│   ├── notificacoes.js   # Sino de notificações
+│   ├── pwa.js            # Atualização do service worker
+│   ├── state.js          # Estado compartilhado entre módulos (usuário, dados atuais)
+│   ├── ui.js             # Componentes de interface e utilidades visuais
+│   └── utils.js          # Utilitários genéricos (datas, erros do Firebase, debounce)
 ├── public/
 │   ├── sw.js             # Service worker (copiado para dist/ no build)
 │   └── manifest.json     # Configuração PWA
@@ -96,12 +106,12 @@ Alternativamente, cole o conteúdo de `firestore.rules` no console do Firebase e
 **Firestore Database > Regras**.
 
 > As regras filtram o acesso por usuário, mas **não** aplicam o soft-delete: o
-> filtro do campo `deleted` é feito no cliente (`js/app.js`), o que mantém
+> filtro do campo `deleted` é feito no cliente (`js/lancamentos.js`), o que mantém
 > visíveis lançamentos antigos criados antes desse campo existir.
 
 ### Definir administradores (Custom Claims)
 
-Tanto as regras quanto o `js/app.js` reconhecem administrador pela claim
+Tanto as regras quanto o `js/auth.js` reconhecem administrador pela claim
 `admin: true` no token de ID. Ela é definida com o Firebase Admin SDK (script
 Node executado uma vez, com uma chave de conta de serviço):
 

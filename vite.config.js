@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // O service worker é escrito à mão em public/sw.js (registrado em js/app.js).
+  // O service worker é escrito à mão em public/sw.js (registrado em js/pwa.js).
   base: "/", // Caminhos absolutos são melhores para PWA e roteamento
   server: {
     port: 1804,

@@ -22,12 +22,27 @@ module.exports = {
         },
       },
       colors: {
-        // Escala completa (equivalente ao blue padrão do Tailwind), para que
-        // nenhuma classe brand-{n} usada no HTML/JS fique sem CSS gerado.
+        // Verde institucional (inspirado no padrão eDoc Forms da Câmara dos
+        // Deputados), para que nenhuma classe brand-{n} usada no HTML/JS
+        // fique sem CSS gerado.
         brand: {
-          50: "#eff6ff", 100: "#dbeafe", 200: "#bfdbfe", 300: "#93c5fd",
-          400: "#60a5fa", 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8",
-          800: "#1e40af", 900: "#1e3a8a", 950: "#172554",
+          50: "#f1f6ef",
+          100: "#dfeada",
+          200: "#bfd5b6",
+          300: "#98ba8c",
+          400: "#729d63",
+          500: "#517f44",
+          600: "#3d6432",
+          700: "#325228",
+          800: "#294321",
+          900: "#1f331a",
+          950: "#111f0e",
+        },
+        // Dourado de destaque (linha divisória / realces do estilo eDoc).
+        gold: {
+          400: "#e0be5c",
+          500: "#c9a227",
+          600: "#a9861d",
         },
       },
     },

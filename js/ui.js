@@ -21,7 +21,8 @@ export const SVG_ICONS = {
     '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />',
   layer:
     '<path d="m12 3 8 4-8 4-8-4 8-4Z" /><path d="m4 12 8 4 8-4" /><path d="m4 16 8 4 8-4" />',
-  trash: '<path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M7 7l1 12h8l1-12" />',
+  trash:
+    '<path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M7 7l1 12h8l1-12" />',
   bars: '<path d="M4 7h16M4 12h16M4 17h16" />',
   plus: '<path d="M12 5v14M5 12h14" />',
   triangle:
@@ -46,6 +47,18 @@ export const SVG_ICONS = {
   gear: '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />',
 };
 
+// Escapa texto para uso seguro dentro de innerHTML (evita XSS armazenado a
+// partir de dados vindos do Firestore, como nomes de encarregados/materiais).
+export const escapeHTML = (str) => {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 // Monta um <svg> a partir de um ícone do SVG_ICONS.
 // nome: chave do ícone; classes: classes CSS do <svg>; extraAttrs: atributos extras.
 export function svgIcon(nome, classes = "w-4 h-4", extraAttrs = "") {
@@ -60,31 +73,13 @@ export const setGreeting = () => {
   if (hora < 12) {
     el.textContent = "Bom dia. Pronto para otimizar as movimentações de hoje?";
   } else if (hora < 18) {
-    el.textContent = "Boa tarde. Acompanhe as saídas de materiais em tempo real.";
+    el.textContent =
+      "Boa tarde. Acompanhe as saídas de materiais em tempo real.";
   } else {
     el.textContent =
       "Boa noite. O fechamento diário dos lançamentos está consolidado.";
   }
 };
-
-// Abre/fecha a barra lateral (mobile).
-export function toggleSidebar() {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("sidebar-overlay");
-  if (!sidebar || !overlay) return;
-  sidebar.classList.toggle("-translate-x-full");
-  overlay.classList.toggle("opacity-0");
-  overlay.classList.toggle("pointer-events-none");
-}
-
-// Fecha a barra lateral quando a tela é pequena (usado ao trocar de aba).
-export function closeSidebarOnMobile() {
-  if (window.innerWidth >= 1024) return;
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("sidebar-overlay");
-  if (sidebar) sidebar.classList.add("-translate-x-full");
-  if (overlay) overlay.classList.add("opacity-0", "pointer-events-none");
-}
 
 // Abre/fecha o menu suspenso do usuário.
 export function toggleDropdown() {
@@ -115,7 +110,7 @@ export function showToast(mensagem, tipo = "success") {
 
   const toast = document.createElement("div");
   toast.className = `toast ${tipo}`;
-  toast.innerHTML = `${icones[tipo] || icones.info} <span class="font-bold text-sm tracking-wide text-slate-700">${mensagem}</span><div class="toast-progress"></div>`;
+  toast.innerHTML = `${icones[tipo] || icones.info} <span class="font-bold text-sm tracking-wide text-slate-700">${escapeHTML(mensagem)}</span><div class="toast-progress"></div>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -141,11 +136,11 @@ export function switchTab(tabId) {
     const btn = document.getElementById("btn-" + id);
     if (!btn) return;
     const ativa = id === tabId;
-    btn.classList.toggle("bg-brand-600/15", ativa);
-    btn.classList.toggle("text-brand-400", ativa);
-    btn.classList.toggle("border-brand-500", ativa);
-    btn.classList.toggle("hover:bg-slate-800", !ativa);
-    btn.classList.toggle("text-slate-400", !ativa);
+    btn.classList.toggle("bg-white/10", ativa);
+    btn.classList.toggle("text-white", ativa);
+    btn.classList.toggle("border-gold-400", ativa);
+    btn.classList.toggle("hover:bg-white/10", !ativa);
+    btn.classList.toggle("text-brand-200", !ativa);
     btn.classList.toggle("border-transparent", !ativa);
   });
 
@@ -154,6 +149,4 @@ export function switchTab(tabId) {
 
   const titulo = document.getElementById("page-title");
   if (titulo && TITULOS_TAB[tabId]) titulo.innerText = TITULOS_TAB[tabId];
-
-  closeSidebarOnMobile();
 }
