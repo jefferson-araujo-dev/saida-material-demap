@@ -39,11 +39,15 @@ Aplicação web progressiva (PWA) para controle de saídas de materiais em almox
 │   ├── app.js            # Lógica principal da aplicação
 │   ├── database.js       # Integrações com Firebase
 │   ├── firebase.js       # Configuração do Firebase
+│   ├── normalizacao.mjs  # Normalização de dados importados
 │   └── ui.js             # Componentes de interface e utilidades visuais
+├── public/
+│   ├── sw.js             # Service worker (copiado para dist/ no build)
+│   └── manifest.json     # Configuração PWA
 ├── index.html            # Estrutura principal da interface
-├── manifest.json         # Configuração PWA
-├── sw.js                 # Service worker
-└── vite.config.js       # Configuração do Vite
+├── firestore.rules       # Regras de segurança do Firestore
+├── firebase.json         # Configuração de deploy do Firebase CLI
+└── vite.config.js        # Configuração do Vite
 ```
 
 ---
@@ -76,6 +80,57 @@ Certifique-se de habilitar:
 
 - Authentication
 - Firestore Database
+
+### Regras de segurança do Firestore
+
+As regras ficam em `firestore.rules` e **precisam ser publicadas** — sem elas os
+dados ficam abertos ou o app perde acesso. Com o [Firebase CLI](https://firebase.google.com/docs/cli):
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase deploy --only firestore:rules --project SEU_PROJECT_ID
+```
+
+Alternativamente, cole o conteúdo de `firestore.rules` no console do Firebase em
+**Firestore Database > Regras**.
+
+> As regras filtram o acesso por usuário, mas **não** aplicam o soft-delete: o
+> filtro do campo `deleted` é feito no cliente (`js/app.js`), o que mantém
+> visíveis lançamentos antigos criados antes desse campo existir.
+
+### Definir administradores (Custom Claims)
+
+Tanto as regras quanto o `js/app.js` reconhecem administrador pela claim
+`admin: true` no token de ID. Ela é definida com o Firebase Admin SDK (script
+Node executado uma vez, com uma chave de conta de serviço):
+
+```js
+const admin = require("firebase-admin");
+admin.initializeApp({ credential: admin.credential.cert(require("./serviceAccountKey.json")) });
+
+admin
+  .auth()
+  .getUserByEmail("pessoa@exemplo.com")
+  .then((u) => admin.auth().setCustomUserClaims(u.uid, { admin: true }))
+  .then(() => console.log("claim definida — o usuário precisa fazer login novamente"));
+```
+
+O usuário precisa renovar o token (novo login) para a claim valer.
+
+### Apelidos nos gráficos
+
+Os rótulos dos gráficos usam a primeira palavra do nome do encarregado. Para
+exibir apelidos sem colocá-los no código, defina no navegador:
+
+```js
+localStorage.setItem(
+  "demap_apelidos",
+  JSON.stringify({ "trecho do nome": "Apelido", "outro nome": "Outro" }),
+);
+```
+
+A comparação é feita em minúsculas por `includes`.
 
 ### 3. Inicie o ambiente de desenvolvimento
 

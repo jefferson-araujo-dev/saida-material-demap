@@ -15,12 +15,15 @@ import {
   removerEncarregadoNoFirestore,
   escutarEncarregados,
   fetchBaseDoFirestore,
+  fetchBaseMetaDoFirestore,
   salvarBaseNoFirestoreLote,
   adicionarLancamentoNoFirestore,
   softDeletarLancamentoNoFirestore, // Renomeado para soft-delete
+  atualizarLancamentoNoFirestore,
   alternarBaixaNoFirestore,
   salvarLancamentosEmLote,
   escutarLancamentos,
+  LIMITE_LANCAMENTOS_PADRAO,
 } from "./database.js";
 
 import {
@@ -33,29 +36,40 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import * as XLSX from "xlsx";
-import {
   normalizarData,
   normalizarLancamentoImportado,
   normalizarTexto,
 } from "./normalizacao.mjs";
 
-Chart.register(
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-);
+// Chart.js é carregado sob demanda (dynamic import) na primeira renderização
+// do dashboard, para não pesar no bundle inicial de quem só usa Lançamentos.
+let ChartPromise = null;
+function carregarChart() {
+  if (!ChartPromise) {
+    ChartPromise = import("chart.js").then((mod) => {
+      mod.Chart.register(
+        mod.BarController,
+        mod.BarElement,
+        mod.CategoryScale,
+        mod.LinearScale,
+        mod.Tooltip,
+        mod.Legend,
+      );
+      return mod.Chart;
+    });
+  }
+  return ChartPromise;
+}
+
+// XLSX (SheetJS) também é carregado sob demanda, só quando o usuário
+// importa ou exporta uma planilha.
+let XLSXPromise = null;
+function carregarXLSX() {
+  if (!XLSXPromise) {
+    XLSXPromise = import("xlsx");
+  }
+  return XLSXPromise;
+}
 
 // ==========================================
 // 0. ESTADO GLOBAL E UTILITÁRIOS DE INTERFACE
@@ -73,7 +87,7 @@ let colunasExportacaoSelecionadas = [];
 // UTILITÁRIOS DE SEGURANÇA
 // ==========================================
 const escapeHTML = (str) => {
-  if (!str) return "";
+  if (str === null || str === undefined) return "";
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -132,6 +146,15 @@ const carregarColunasExportacao = () => {
   }
 };
 
+// Retorna a data de hoje no fuso local no formato YYYY-MM-DD
+// (evita o deslocamento de um dia causado por new Date().toISOString(), que usa UTC)
+const obterDataLocalFormatada = (data = new Date()) => {
+  const ano = data.getFullYear();
+  const mes = `${data.getMonth() + 1}`.padStart(2, "0");
+  const dia = `${data.getDate()}`.padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+};
+
 const formatarDataParaDisplay = (valor) => {
   if (!valor) return "";
   const texto = String(valor);
@@ -143,15 +166,40 @@ const atualizarTextoSeExiste = (id, valor) => {
   if (el) el.textContent = valor;
 };
 
+// Registro dos modais abertos, na ordem de abertura, para dar suporte a
+// fechar com Escape e restaurar o foco ao elemento que abriu o modal.
+const modaisAbertos = new Map(); // modalId -> { contentId, prevFocus, hideTimer }
+
+const primeiroFocavel = (container) =>
+  container.querySelector(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  );
+
 const abrirModal = (modalId, contentId, callback) => {
   const modal = document.getElementById(modalId);
   const content = document.getElementById(contentId);
   if (!modal || !content) return;
 
+  const registro = modaisAbertos.get(modalId);
+  if (registro?.hideTimer) clearTimeout(registro.hideTimer);
+
+  content.setAttribute("role", "dialog");
+  content.setAttribute("aria-modal", "true");
+  modaisAbertos.set(modalId, {
+    contentId,
+    prevFocus:
+      registro?.prevFocus ||
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null),
+    hideTimer: null,
+  });
+
   modal.classList.remove("hidden");
   requestAnimationFrame(() => {
     modal.classList.remove("opacity-0");
     content.classList.remove("scale-95");
+    (primeiroFocavel(content) || content).focus?.();
     if (typeof callback === "function") callback();
   });
 };
@@ -162,8 +210,30 @@ const fecharModal = (modalId, contentId) => {
   if (!modal || !content) return;
   modal.classList.add("opacity-0");
   content.classList.add("scale-95");
-  setTimeout(() => modal.classList.add("hidden"), 300);
+
+  const registro = modaisAbertos.get(modalId);
+  if (registro?.hideTimer) clearTimeout(registro.hideTimer);
+  const hideTimer = setTimeout(() => {
+    modal.classList.add("hidden");
+    modaisAbertos.delete(modalId);
+  }, 300);
+  modaisAbertos.set(modalId, {
+    contentId,
+    prevFocus: registro?.prevFocus || null,
+    hideTimer,
+  });
+
+  if (registro?.prevFocus?.isConnected) registro.prevFocus.focus();
 };
+
+// Fecha o modal aberto mais recentemente ao pressionar Escape.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || modaisAbertos.size === 0) return;
+  const ids = [...modaisAbertos.keys()];
+  const modalId = ids[ids.length - 1];
+  const registro = modaisAbertos.get(modalId);
+  if (registro) fecharModal(modalId, registro.contentId);
+});
 
 carregarColunasExportacao();
 
@@ -275,16 +345,24 @@ const esconderSkeletonDashboard = () => {
   if (dashboardSkeleton) dashboardSkeleton.classList.add("hidden");
 };
 
+// Apelidos exibidos nos rótulos dos gráficos. Configuráveis (não ficam no
+// código): localStorage "demap_apelidos" = JSON de { "trecho do nome": "Apelido" },
+// comparado em minúsculas. Sem configuração, usa a primeira palavra do nome.
+let apelidosEncarregados = {};
+try {
+  const salvos = localStorage.getItem("demap_apelidos");
+  const parsed = salvos ? JSON.parse(salvos) : null;
+  if (parsed && typeof parsed === "object") apelidosEncarregados = parsed;
+} catch (e) {}
+
 const formatarNome = (nome) => {
-  const n = String(nome).toLowerCase().trim();
-  if (n.includes("francisco gustavo")) return "Gustavo";
-  if (n.includes("francisco antônio") || n.includes("francisco antonio"))
-    return "Toinho";
-  if (n.includes("cordeiro")) return "Samambaia";
-  if (n.includes("galdino")) return "Neto";
-  if (n.includes("valdene")) return "Valdene";
-  if (n.includes("willian")) return "Willian";
-  return nome.split(" ")[0]; // Padrão: usa a primeira palavra
+  const n = String(nome ?? "")
+    .toLowerCase()
+    .trim();
+  for (const [trecho, apelido] of Object.entries(apelidosEncarregados)) {
+    if (trecho && n.includes(String(trecho).toLowerCase())) return apelido;
+  }
+  return String(nome ?? "").split(" ")[0]; // Padrão: primeira palavra
 };
 
 setGreeting();
@@ -382,7 +460,10 @@ document.addEventListener("click", (e) => {
       limparFiltros();
       break;
     case "mudar-pagina":
-      mudarPagina(parseInt(actionEl.getAttribute("data-dir")));
+      mudarPagina(parseInt(actionEl.getAttribute("data-dir"), 10));
+      break;
+    case "carregar-mais-lancamentos":
+      carregarMaisLancamentos();
       break;
     case "show-toast":
       showToast(
@@ -461,6 +542,13 @@ const toggleNotifications = function () {
     dropdown.classList.toggle("opacity-0");
     dropdown.classList.toggle("pointer-events-none");
     dropdown.classList.toggle("scale-95");
+    const btn = document.querySelector('[data-action="toggle-notifications"]');
+    if (btn) {
+      btn.setAttribute(
+        "aria-expanded",
+        String(!dropdown.classList.contains("pointer-events-none")),
+      );
+    }
   }
 };
 
@@ -531,9 +619,9 @@ const iniciarEscutaNotificacoes = function () {
                 <div class="p-3 ${bgHover} rounded-xl transition-colors mb-1 border border-transparent hover:border-slate-100 group flex gap-2 items-start">
                   ${dot}
                   <div>
-                    <p class="text-xs font-bold ${textColor} transition-colors">${notif.titulo}</p>
-                    <p class="text-[10px] text-slate-500 mt-1">${notif.mensagem}</p>
-                    <p class="text-[9px] text-slate-400 mt-2 font-semibold uppercase tracking-wider">${timeStr}</p>
+                    <p class="text-xs font-bold ${textColor} transition-colors">${escapeHTML(notif.titulo)}</p>
+                    <p class="text-[10px] text-slate-500 mt-1">${escapeHTML(notif.mensagem)}</p>
+                    <p class="text-[9px] text-slate-400 mt-2 font-semibold uppercase tracking-wider">${escapeHTML(timeStr)}</p>
                   </div>
                 </div>
               `;
@@ -821,18 +909,23 @@ const confirmarModalPrompt = async () => {
       encarregados.push(novoNome);
       renderizarSelectEncarregados();
       document.getElementById("select-encarregado").value = novoNome;
-      showToast(`Encarregado "${novoNome}" adicionado!`, "success");
-      criarNotificacao(
-        "Novo Responsável",
-        `O encarregado "${novoNome}" foi adicionado.`,
-        "info",
-      );
       fecharModalPrompt();
 
-      // Salvar na nuvem (Firestore)
+      // Salvar na nuvem (Firestore). Se falhar, desfaz a adição local para
+      // não deixar o usuário achando que foi salvo quando não foi.
       try {
         await salvarEncarregadoNoFirestore(novoNome);
-      } catch (e) {}
+        showToast(`Encarregado "${novoNome}" adicionado!`, "success");
+        criarNotificacao(
+          "Novo Responsável",
+          `O encarregado "${novoNome}" foi adicionado.`,
+          "info",
+        );
+      } catch (e) {
+        encarregados = encarregados.filter((nome) => nome !== novoNome);
+        renderizarSelectEncarregados();
+        mostrarErroFirebase(e, "Não foi possível salvar o encarregado.");
+      }
     } else {
       showToast("Este encarregado já existe.", "error");
     }
@@ -924,10 +1017,27 @@ function atualizarUIBaseDados(count) {
 
 const carregarBaseDoFirestore = async function () {
   try {
+    // Só rebaixa a coleção inteira se a versão em cache estiver desatualizada.
+    const meta = await fetchBaseMetaDoFirestore();
+    const versaoLocal = Number(
+      localStorage.getItem("demap_base_versao") || 0,
+    );
+    const temBaseLocal = Object.keys(baseDados).length > 0;
+    if (
+      meta &&
+      temBaseLocal &&
+      meta.updatedAtMs &&
+      meta.updatedAtMs === versaoLocal
+    ) {
+      return; // Base local já está sincronizada
+    }
+
     const newBase = await fetchBaseDoFirestore();
     if (newBase) {
       baseDados = newBase;
       localStorage.setItem("demap_base_dados", JSON.stringify(baseDados));
+      if (meta?.updatedAtMs)
+        localStorage.setItem("demap_base_versao", String(meta.updatedAtMs));
       atualizarUIBaseDados(Object.keys(baseDados).length);
     }
   } catch (error) {
@@ -964,8 +1074,9 @@ document
     if (!file) return;
     showToast("Sincronizando base...", "info");
     const reader = new FileReader();
-    reader.onload = function (event) {
+    reader.onload = async function (event) {
       try {
+        const XLSX = await carregarXLSX();
         const data = new Uint8Array(event.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const rows = XLSX.utils.sheet_to_json(
@@ -1011,9 +1122,7 @@ document
     reader.readAsArrayBuffer(file);
   });
 
-document.getElementById("input-data").value = new Date()
-  .toISOString()
-  .split("T")[0];
+document.getElementById("input-data").value = obterDataLocalFormatada();
 
 const inputCodigo = document.getElementById("input-codigo");
 const inputMaterial = document.getElementById("input-material");
@@ -1060,6 +1169,9 @@ let dadosFiltrados = [];
 let ordenacaoAtual = { coluna: "data", crescente: false };
 let paginaAtual = 1;
 let itensPorPagina = 9;
+let unsubscribeLancamentos = null;
+let limiteLancamentos = LIMITE_LANCAMENTOS_PADRAO;
+let atingiuLimiteLancamentos = false;
 
 // Carrega as configurações locais
 const savedConfig = localStorage.getItem("demap_configuracoes");
@@ -1077,41 +1189,45 @@ try {
     }
   };
   initAuth();
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
 
-      // Atualizar UI com dados do usuário
-      const userEmail = user.email || "visitante@coeng.com";
-      let userNamePart = user.email
-        ? user.email.split("@")[0].split(".")[0]
-        : "Visitante";
-      let fullName = userNamePart;
-      let roleName = "Usuário Padrão";
-      let roleClass =
-        "text-xs text-blue-600 font-bold bg-blue-50 inline-block px-2 py-0.5 rounded-md mt-0.5";
+      // O papel de administrador vem de uma Custom Claim (admin: true) no token
+      // de ID, definida pelo Firebase Admin SDK (ver README). Não há mais e-mail
+      // fixo no código.
+      try {
+        const tokenResult = await user.getIdTokenResult();
+        isAdmin = tokenResult.claims.admin === true;
+      } catch (error) {
+        isAdmin = false;
+      }
 
-      if (userEmail.toLowerCase() === "jeffin.araujo.1990@gmail.com") {
-        userNamePart = "Jefferson";
-        fullName = "Jefferson de Araújo Silva";
+      const capitalizar = (texto) =>
+        texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : texto;
+      const userEmail = user.email || "visitante@coeng.com";
+      const nomeBase =
+        (user.displayName && user.displayName.trim()) ||
+        (user.email ? user.email.split("@")[0].split(".")[0] : "Visitante");
+
+      let roleName, roleClass;
+      if (isAdmin) {
         roleName = "Administrador";
         roleClass =
           "text-xs text-brand-600 font-bold bg-brand-50 inline-block px-2 py-0.5 rounded-md mt-0.5";
-        isAdmin = true;
       } else if (!user.email) {
         roleName = "Visitante";
         roleClass =
           "text-xs text-slate-500 font-bold bg-slate-100 inline-block px-2 py-0.5 rounded-md mt-0.5";
-        isAdmin = false;
       } else {
-        isAdmin = false;
+        roleName = "Usuário Padrão";
+        roleClass =
+          "text-xs text-blue-600 font-bold bg-blue-50 inline-block px-2 py-0.5 rounded-md mt-0.5";
       }
-      const displayNameHeader = user.displayName
-        ? user.displayName.split(" ")[0]
-        : userNamePart.charAt(0).toUpperCase() + userNamePart.slice(1);
+
       const displayNameFull =
-        user.displayName ||
-        fullName.charAt(0).toUpperCase() + fullName.slice(1);
+        (user.displayName && user.displayName.trim()) || capitalizar(nomeBase);
+      const displayNameHeader = capitalizar(displayNameFull.split(" ")[0]);
       const initial = displayNameHeader.charAt(0).toUpperCase();
 
       const headerNameEl = document.getElementById("header-user-name");
@@ -1209,6 +1325,7 @@ document
     const reader = new FileReader();
     reader.onload = async function (event) {
       try {
+        const XLSX = await carregarXLSX();
         const data = new Uint8Array(event.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const rows = XLSX.utils.sheet_to_json(
@@ -1221,7 +1338,8 @@ document
           if (
             lancamento.codigo &&
             lancamento.quantidade > 0 &&
-            lancamento.data
+            lancamento.data &&
+            lancamento.encarregado
           ) {
             lancamentosFormatados.push(lancamento);
           }
@@ -1235,8 +1353,6 @@ document
           );
           showToast(`${count} registros importados!`, "success");
           criarNotificacao(
-            currentUser.displayName,
-            currentUser.uid,
             "Importação Concluída",
             `${count} lançamentos foram importados do histórico.`,
             "success",
@@ -1377,23 +1493,41 @@ function iniciarEscutaDeDados() {
   isLoadingDashboard = true;
   renderizarSkeletonTabela();
   renderizarSkeletonDashboard();
-  escutarLancamentos(currentUser.uid, (snapshot) => {
-    dadosAtuais = [];
-    if (!snapshot.empty)
-      snapshot.forEach((doc) => {
-        dadosAtuais.push({ ...doc.data(), id: doc.id });
-      });
-    isLoadingTabela = false;
-    isLoadingDashboard = false;
-    esconderSkeletonDashboard();
-    aplicarFiltroPesquisa();
-    atualizarDashboard();
-    if (!dadosCarregadosToastMostrado) {
-      dadosCarregadosToastMostrado = true;
-      showToast("Dados carregados.", "success");
-    }
-  });
+  if (typeof unsubscribeLancamentos === "function") {
+    unsubscribeLancamentos();
+    unsubscribeLancamentos = null;
+  }
+  unsubscribeLancamentos = escutarLancamentos(
+    currentUser.uid,
+    (snapshot) => {
+      atingiuLimiteLancamentos = snapshot.size >= limiteLancamentos;
+      dadosAtuais = [];
+      if (!snapshot.empty)
+        snapshot.forEach((doc) => {
+          const dados = doc.data();
+          // Filtro de soft-delete aplicado no cliente (ver database.js)
+          if (dados.deleted === true) return;
+          dadosAtuais.push({ ...dados, id: doc.id });
+        });
+      isLoadingTabela = false;
+      isLoadingDashboard = false;
+      esconderSkeletonDashboard();
+      aplicarFiltroPesquisa();
+      atualizarDashboard();
+      if (!dadosCarregadosToastMostrado) {
+        dadosCarregadosToastMostrado = true;
+        showToast("Dados carregados.", "success");
+      }
+    },
+    limiteLancamentos,
+  );
 }
+
+const carregarMaisLancamentos = () => {
+  limiteLancamentos += LIMITE_LANCAMENTOS_PADRAO;
+  showToast("Carregando mais registros...", "info");
+  iniciarEscutaDeDados();
+};
 
 const searchInput = document.getElementById("input-search");
 const btnClearSearch = document.getElementById("btn-clear-search");
@@ -1528,12 +1662,16 @@ function aplicarFiltroPesquisa() {
   const dataFim = inputDataFim.value
     ? parseDataFiltro(inputDataFim.value)
     : null;
+  const contemTermo = (valor) =>
+    String(valor ?? "")
+      .toLowerCase()
+      .includes(termo);
   let tempFiltrados = dadosAtuais.filter((item) => {
     const matchTexto =
       termo === "" ||
-      item.codigo.toLowerCase().includes(termo) ||
-      item.material.toLowerCase().includes(termo) ||
-      item.encarregado.toLowerCase().includes(termo);
+      contemTermo(item.codigo) ||
+      contemTermo(item.material) ||
+      contemTermo(item.encarregado);
 
     let matchEncarregado = true;
     if (encarregadoSelecionado)
@@ -1602,7 +1740,10 @@ function renderizarGridLancamentos() {
     return;
   }
 
-  DOM.grid.innerHTML = "";
+  const btnCarregarMais = document.getElementById("btn-carregar-mais");
+  if (btnCarregarMais)
+    btnCarregarMais.classList.toggle("hidden", !atingiuLimiteLancamentos);
+
   const total = dadosFiltrados.length;
   const paginas = Math.ceil(total / itensPorPagina) || 1;
 
@@ -1612,9 +1753,10 @@ function renderizarGridLancamentos() {
                     <h4 class="font-extrabold text-lg text-slate-700">Nenhum registro encontrado</h4>
                     <p class="text-sm mt-1">Altere os filtros de pesquisa ou adicione um novo lançamento.</p>
                 </div>`;
-    DOM.tabInfo.textContent = "0 registros";
-    DOM.btnPrev.disabled = true;
-    DOM.btnNext.disabled = true;
+    if (DOM.tabInfo) DOM.tabInfo.textContent = "0 registros";
+    if (DOM.pagInfo) DOM.pagInfo.textContent = "0 / 0";
+    if (DOM.btnPrev) DOM.btnPrev.disabled = true;
+    if (DOM.btnNext) DOM.btnNext.disabled = true;
     return;
   }
 
@@ -1626,9 +1768,6 @@ function renderizarGridLancamentos() {
   let itensHTML = "";
   dadosFiltrados.slice(start, end).forEach((item) => {
     const dataBR = formatarDataParaDisplay(item.data);
-    const idArg = item.isGrouped
-      ? `[${item.ids.map((id) => `'${id}'`).join(",")}]`
-      : `'${item.id}'`;
     const baixaAtual = item.baixa || "Não";
     const borderColor =
       baixaAtual === "Sim" ? "border-t-emerald-500" : "border-t-amber-500";
@@ -1636,10 +1775,17 @@ function renderizarGridLancamentos() {
     const materialSeguro = escapeHTML(item.material);
     const encarregadoSeguro = escapeHTML(item.encarregado);
 
+    // Valor do data-id: string JSON-like com aspas simples quando é um grupo
+    // (ver parsing no handler de "toggle-baixa"), ou o id único caso contrário.
+    const idBaixa = item.isGrouped
+      ? `[${item.ids.map((id) => `'${id}'`).join(",")}]`
+      : item.id;
+    const btnClasses =
+      "flex-1 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5";
     const btnBaixa =
       baixaAtual === "Sim"
-        ? `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Sim" class="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("checkDouble", "w-4 h-4")} Concluído</button>`
-        : `<button data-action="toggle-baixa" data-id="${item.isGrouped ? `[${item.ids.map((id) => `'${id}'`).join(",")}]` : item.id}" data-status="Não" class="flex-1 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5">${svgIcon("clock", "w-4 h-4")} Pendente</button>`;
+        ? `<button data-action="toggle-baixa" data-id="${idBaixa}" data-status="Sim" class="${btnClasses} bg-emerald-50 hover:bg-emerald-100 text-emerald-700">${svgIcon("checkDouble", "w-4 h-4")} Concluído</button>`
+        : `<button data-action="toggle-baixa" data-id="${idBaixa}" data-status="Não" class="${btnClasses} bg-amber-50 hover:bg-amber-100 text-amber-700">${svgIcon("clock", "w-4 h-4")} Pendente</button>`;
 
     itensHTML += `
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 border-t-4 ${borderColor} p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
@@ -1682,19 +1828,21 @@ function renderizarGridLancamentos() {
   });
   DOM.grid.innerHTML = itensHTML;
 
-  document.getElementById("tabela-info").textContent =
-    `Pág. ${paginaAtual} de ${paginas} (${total} itens)`;
-  document.getElementById("tabela-paginacao-info").textContent =
-    `${paginaAtual} / ${paginas}`;
-  document.getElementById("btn-prev-page").disabled = paginaAtual === 1;
-  document.getElementById("btn-next-page").disabled = paginaAtual === paginas;
+  if (DOM.tabInfo)
+    DOM.tabInfo.textContent = `Pág. ${paginaAtual} de ${paginas} (${total} itens)`;
+  if (DOM.pagInfo) DOM.pagInfo.textContent = `${paginaAtual} / ${paginas}`;
+  if (DOM.btnPrev) DOM.btnPrev.disabled = paginaAtual === 1;
+  if (DOM.btnNext) DOM.btnNext.disabled = paginaAtual === paginas;
 }
 
 const mudarPagina = (dir) => {
   paginaAtual += dir;
   renderizarGridLancamentos();
 };
-const exportarExcel = (colunasSelecionadas = colunasExportacaoSelecionadas) => {
+const exportarExcel = async (
+  colunasSelecionadas = colunasExportacaoSelecionadas,
+) => {
+  const XLSX = await carregarXLSX();
   if (!dadosFiltrados.length)
     return showToast("Sem dados para exportar.", "info");
   const filtrosResumo = [
@@ -1773,8 +1921,17 @@ function atualizarDashboard() {
     encSet.add(i.encarregado);
     matSet.add(i.codigo);
     volEnc[i.encarregado] = (volEnc[i.encarregado] || 0) + Number(i.quantidade);
-    let matDesc = i.material.substring(0, 30) + "...";
-    topMat[matDesc] = (topMat[matDesc] || 0) + Number(i.quantidade);
+    const materialNome = i.material || "";
+    const matDesc =
+      materialNome.length > 30
+        ? materialNome.substring(0, 30) + "..."
+        : materialNome;
+    // Agrupa pelo nome completo (não pelo rótulo truncado) para não somar
+    // materiais distintos que só compartilham o mesmo prefixo de 30 caracteres.
+    if (!topMat[materialNome]) {
+      topMat[materialNome] = { label: matDesc, vol: 0 };
+    }
+    topMat[materialNome].vol += Number(i.quantidade);
 
     const dataItem = parseDataFiltro(i.data);
     if (dataItem) {
@@ -1806,8 +1963,8 @@ function atualizarDashboard() {
     .map((k) => ({ nome: k, vol: volEnc[k] }))
     .sort((a, b) => b.vol - a.vol)
     .slice(0, 10);
-  let aMat = Object.keys(topMat)
-    .map((k) => ({ nome: k, vol: topMat[k] }))
+  let aMat = Object.values(topMat)
+    .map((v) => ({ nome: v.label, vol: v.vol }))
     .sort((a, b) => b.vol - a.vol)
     .slice(0, 5);
 
@@ -1825,7 +1982,8 @@ function atualizarDashboard() {
   }
 }
 
-function renderizarGraficos(dEnc, dMat) {
+async function renderizarGraficos(dEnc, dMat) {
+  const Chart = await carregarChart();
   Chart.defaults.font.family = "'Inter', sans-serif";
   const canvasEnc = document.getElementById("chartEncarregados");
   const canvasMat = document.getElementById("chartMateriais");
@@ -1935,13 +2093,15 @@ function renderizarGraficos(dEnc, dMat) {
 // ==========================================
 // 7. SERVICE WORKER (PWA INSTALÁVEL)
 // ==========================================
+// Service worker escrito à mão (public/sw.js). Não usamos vite-plugin-pwa
+// para evitar dois service workers concorrentes.
 const mostrarBannerAtualizacaoPWA = (registration) => {
-  if (!document.getElementById("pwa-update-banner")) {
-    const banner = document.createElement("div");
-    banner.id = "pwa-update-banner";
-    banner.className =
-      "fixed bottom-4 right-4 z-[80] max-w-sm rounded-2xl border border-brand-200 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur";
-    banner.innerHTML = `
+  if (document.getElementById("pwa-update-banner")) return;
+  const banner = document.createElement("div");
+  banner.id = "pwa-update-banner";
+  banner.className =
+    "fixed bottom-4 right-4 z-[80] max-w-sm rounded-2xl border border-brand-200 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur";
+  banner.innerHTML = `
       <div class="flex items-start gap-3">
         <div class="rounded-xl bg-brand-50 p-2 text-brand-600">
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -1959,28 +2119,25 @@ const mostrarBannerAtualizacaoPWA = (registration) => {
           </div>
         </div>
       </div>`;
-    document.body.appendChild(banner);
-    document
-      .getElementById("btn-aplicar-atualizacao")
-      .addEventListener("click", () => {
-        if (registration?.waiting) {
-          registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          showToast("Atualização iniciada. Recarregando...", "success");
-          setTimeout(() => window.location.reload(), 600);
-        }
-      });
-    document
-      .getElementById("btn-fechar-atualizacao")
-      .addEventListener("click", () => {
-        banner.remove();
-      });
-  }
+  document.body.appendChild(banner);
+  document
+    .getElementById("btn-aplicar-atualizacao")
+    .addEventListener("click", () => {
+      if (registration?.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        showToast("Atualização iniciada. Recarregando...", "success");
+        setTimeout(() => window.location.reload(), 600);
+      }
+    });
+  document
+    .getElementById("btn-fechar-atualizacao")
+    .addEventListener("click", () => banner.remove());
 };
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("./sw.js")
+      .register("/sw.js")
       .then((registration) => {
         if (registration.waiting) {
           mostrarBannerAtualizacaoPWA(registration);

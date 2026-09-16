@@ -4,10 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
+    <meta
+      name="description"
+      content="Sistema de gestão de materiais do almoxarifado COENG: controle de saídas, lançamentos, importação/exportação de dados e painel gerencial em tempo real."
+    />
+    <meta property="og:title" content="Gestão de Materiais | COENG" />
+    <meta
+      property="og:description"
+      content="Controle de saídas de materiais do almoxarifado com painel gerencial, filtros avançados e sincronização em tempo real."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/favicon.svg" />
     <title>Gestão de Materiais | COENG</title>
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon.svg" />
-    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Fonte Inter (Padrão Profissional) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -803,6 +814,7 @@
         <form id="form-login" class="space-y-5" autocomplete="off">
           <div>
             <label
+              for="login-email"
               class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
               >E-mail Corporativo</label
             >
@@ -818,6 +830,7 @@
           <div>
             <div class="flex justify-between items-center mb-2">
               <label
+                for="login-password"
                 class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
                 >Senha</label
               >
@@ -885,6 +898,9 @@
     <!-- Modais -->
     <div
       id="modal-confirmacao"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-titulo"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -926,6 +942,9 @@
 
     <div
       id="modal-prompt"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Novo Encarregado"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -974,6 +993,9 @@
 
     <div
       id="modal-perfil"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Meu Perfil"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1064,6 +1086,9 @@
 
     <div
       id="modal-configuracoes"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configurações"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1088,6 +1113,7 @@
         <div class="space-y-5">
           <div>
             <label
+              for="config-itens-pagina"
               class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
               >Itens por Página (Histórico)</label
             >
@@ -1121,6 +1147,9 @@
 
     <div
       id="modal-exportacao"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Personalizar exportação"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1167,6 +1196,9 @@
 
     <div
       id="modal-edicao"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Editar Lançamento"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -1491,6 +1523,9 @@
               type="button"
               data-action="toggle-notifications"
               aria-label="Notificações"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="notifications-dropdown"
               class="relative p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors focus:outline-none"
             >
               <svg class="w-5 h-5" aria-hidden="true">
@@ -1546,6 +1581,10 @@
             <button
               id="user-avatar-btn"
               data-action="toggle-dropdown"
+              aria-label="Menu do usuário"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="user-dropdown"
               class="bg-gradient-to-br from-brand-500 to-indigo-600 text-white shadow-lg shadow-brand-500/30 rounded-xl h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center font-black text-lg ring-2 ring-white cursor-pointer hover:scale-105 transition-transform flex-shrink-0 no-select focus:outline-none"
             >
               U
@@ -1742,6 +1781,8 @@
                 >
                   <canvas
                     id="chartEncarregados"
+                    role="img"
+                    aria-label="Gráfico de barras: volume de saídas por encarregado"
                     class="absolute inset-0 z-10"
                   ></canvas>
                   <div
@@ -1776,6 +1817,8 @@
                 >
                   <canvas
                     id="chartMateriais"
+                    role="img"
+                    aria-label="Gráfico de barras: materiais mais solicitados"
                     class="absolute inset-0 z-10"
                   ></canvas>
                   <div
@@ -1988,6 +2031,7 @@
                   </svg>
                   <select
                     id="select-filtro-encarregado"
+                    aria-label="Filtrar por responsável"
                     class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   ></select>
                 </div>
@@ -1999,6 +2043,7 @@
                   </svg>
                   <select
                     id="select-filtro-status"
+                    aria-label="Filtrar por status"
                     class="block w-full xl:w-36 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   >
                     <option value="">Todos os status</option>
@@ -2040,6 +2085,7 @@
                   </svg>
                   <select
                     id="select-ordenacao"
+                    aria-label="Ordenar lançamentos"
                     class="block w-full xl:w-48 border-none bg-transparent text-slate-700 font-bold focus:outline-none focus:ring-0 text-xs sm:text-sm cursor-pointer outline-none appearance-none"
                   >
                     <option value="data_desc">Mais recentes</option>
@@ -2133,11 +2179,21 @@
               id="tabela-footer"
               class="bg-white border-t border-slate-100 px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0"
             >
-              <span
-                id="tabela-info"
-                class="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-widest"
-                >Calculando...</span
-              >
+              <div class="flex flex-col items-center sm:items-start gap-1">
+                <span
+                  id="tabela-info"
+                  class="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-widest"
+                  >Calculando...</span
+                >
+                <button
+                  id="btn-carregar-mais"
+                  type="button"
+                  data-action="carregar-mais-lancamentos"
+                  class="hidden text-[10px] sm:text-xs font-bold text-brand-600 hover:text-brand-700 underline underline-offset-2"
+                >
+                  Carregar mais registros
+                </button>
+              </div>
               <div class="flex items-center gap-2">
                 <button
                   id="btn-prev-page"
