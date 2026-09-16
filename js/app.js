@@ -35,7 +35,6 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import * as XLSX from "xlsx";
 import {
   normalizarData,
   normalizarLancamentoImportado,
@@ -60,6 +59,16 @@ function carregarChart() {
     });
   }
   return ChartPromise;
+}
+
+// XLSX (SheetJS) também é carregado sob demanda, só quando o usuário
+// importa ou exporta uma planilha.
+let XLSXPromise = null;
+function carregarXLSX() {
+  if (!XLSXPromise) {
+    XLSXPromise = import("xlsx");
+  }
+  return XLSXPromise;
 }
 
 // ==========================================
@@ -1053,8 +1062,9 @@ document
     if (!file) return;
     showToast("Sincronizando base...", "info");
     const reader = new FileReader();
-    reader.onload = function (event) {
+    reader.onload = async function (event) {
       try {
+        const XLSX = await carregarXLSX();
         const data = new Uint8Array(event.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const rows = XLSX.utils.sheet_to_json(
@@ -1303,6 +1313,7 @@ document
     const reader = new FileReader();
     reader.onload = async function (event) {
       try {
+        const XLSX = await carregarXLSX();
         const data = new Uint8Array(event.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const rows = XLSX.utils.sheet_to_json(
@@ -1815,7 +1826,10 @@ const mudarPagina = (dir) => {
   paginaAtual += dir;
   renderizarGridLancamentos();
 };
-const exportarExcel = (colunasSelecionadas = colunasExportacaoSelecionadas) => {
+const exportarExcel = async (
+  colunasSelecionadas = colunasExportacaoSelecionadas,
+) => {
+  const XLSX = await carregarXLSX();
   if (!dadosFiltrados.length)
     return showToast("Sem dados para exportar.", "info");
   const filtrosResumo = [

@@ -16,10 +16,14 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            // Chart.js fica em chunk próprio para ser baixado só quando o
-            // dashboard é acessado (import dinâmico em js/app.js).
+            // Chart.js e XLSX ficam em chunks próprios, baixados só quando
+            // o dashboard ou a importação/exportação são usados (import
+            // dinâmico em js/app.js).
             if (id.includes("chart.js")) {
               return "chart";
+            }
+            if (id.includes("xlsx")) {
+              return "xlsx";
             }
             return "vendor"; // Demais bibliotecas externas em um arquivo próprio
           }
