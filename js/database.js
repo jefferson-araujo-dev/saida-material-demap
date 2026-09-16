@@ -203,12 +203,23 @@ export const alternarBaixaNoFirestore = async (
   };
 
   if (Array.isArray(idOuIds)) {
-    const batch = writeBatch(db);
-    idOuIds.forEach((id) => {
-      const ref = doc(db, "artifacts", appId, "users", uid, "lancamentos", id);
-      batch.update(ref, updateData);
-    });
-    await batch.commit();
+    for (let i = 0; i < idOuIds.length; i += 500) {
+      const chunk = idOuIds.slice(i, i + 500);
+      const batch = writeBatch(db);
+      chunk.forEach((id) => {
+        const ref = doc(
+          db,
+          "artifacts",
+          appId,
+          "users",
+          uid,
+          "lancamentos",
+          id,
+        );
+        batch.update(ref, updateData);
+      });
+      await batch.commit();
+    }
   } else {
     const ref = doc(
       db,
@@ -229,21 +240,26 @@ export const salvarLancamentosEmLote = async (
   createdBy,
   createdByUid,
 ) => {
-  const batch = writeBatch(db);
   const ref = collection(db, "artifacts", appId, "users", uid, "lancamentos");
-  lancamentos.forEach((l) =>
-    batch.set(doc(ref), {
-      ...l,
-      createdAt: serverTimestamp(),
-      createdBy: createdBy,
-      createdByUid: createdByUid,
-      lastModifiedAt: serverTimestamp(),
-      lastModifiedBy: createdBy,
-      lastModifiedByUid: createdByUid,
-      deleted: false,
-    }),
-  );
-  if (lancamentos.length > 0) await batch.commit();
+  // O Firestore limita cada batch a 500 escritas; particiona para suportar
+  // importações de histórico maiores que isso.
+  for (let i = 0; i < lancamentos.length; i += 500) {
+    const chunk = lancamentos.slice(i, i + 500);
+    const batch = writeBatch(db);
+    chunk.forEach((l) =>
+      batch.set(doc(ref), {
+        ...l,
+        createdAt: serverTimestamp(),
+        createdBy: createdBy,
+        createdByUid: createdByUid,
+        lastModifiedAt: serverTimestamp(),
+        lastModifiedBy: createdBy,
+        lastModifiedByUid: createdByUid,
+        deleted: false,
+      }),
+    );
+    await batch.commit();
+  }
   return lancamentos.length;
 };
 
