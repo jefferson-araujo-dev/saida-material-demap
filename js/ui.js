@@ -93,6 +93,13 @@ export function toggleDropdown() {
   dropdown.classList.toggle("opacity-0");
   dropdown.classList.toggle("pointer-events-none");
   dropdown.classList.toggle("scale-95");
+  const btn = document.getElementById("user-avatar-btn");
+  if (btn) {
+    btn.setAttribute(
+      "aria-expanded",
+      String(!dropdown.classList.contains("pointer-events-none")),
+    );
+  }
 }
 
 // Exibe um toast temporário. tipo: "success" | "error" | "info".

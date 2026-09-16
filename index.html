@@ -1523,6 +1523,9 @@
               type="button"
               data-action="toggle-notifications"
               aria-label="Notificações"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="notifications-dropdown"
               class="relative p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors focus:outline-none"
             >
               <svg class="w-5 h-5" aria-hidden="true">
@@ -1578,6 +1581,10 @@
             <button
               id="user-avatar-btn"
               data-action="toggle-dropdown"
+              aria-label="Menu do usuário"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="user-dropdown"
               class="bg-gradient-to-br from-brand-500 to-indigo-600 text-white shadow-lg shadow-brand-500/30 rounded-xl h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center font-black text-lg ring-2 ring-white cursor-pointer hover:scale-105 transition-transform flex-shrink-0 no-select focus:outline-none"
             >
               U
@@ -1774,6 +1781,8 @@
                 >
                   <canvas
                     id="chartEncarregados"
+                    role="img"
+                    aria-label="Gráfico de barras: volume de saídas por encarregado"
                     class="absolute inset-0 z-10"
                   ></canvas>
                   <div
@@ -1808,6 +1817,8 @@
                 >
                   <canvas
                     id="chartMateriais"
+                    role="img"
+                    aria-label="Gráfico de barras: materiais mais solicitados"
                     class="absolute inset-0 z-10"
                   ></canvas>
                   <div

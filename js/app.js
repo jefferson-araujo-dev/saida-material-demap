@@ -542,6 +542,13 @@ const toggleNotifications = function () {
     dropdown.classList.toggle("opacity-0");
     dropdown.classList.toggle("pointer-events-none");
     dropdown.classList.toggle("scale-95");
+    const btn = document.querySelector('[data-action="toggle-notifications"]');
+    if (btn) {
+      btn.setAttribute(
+        "aria-expanded",
+        String(!dropdown.classList.contains("pointer-events-none")),
+      );
+    }
   }
 };
 
