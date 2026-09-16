@@ -1,6 +1,10 @@
 export const normalizarTexto = (value) => {
   if (value === null || value === undefined) return "";
+  // Faz trim antes de remover aspas nas pontas: sem isso, um valor como
+  // `  "Nome"  ` não tem a aspa exatamente no início/fim da string (tem um
+  // espaço), a regex não bate, e a aspa nunca é removida.
   return String(value)
+    .trim()
     .replace(/^['"]|['"]$/g, "")
     .trim();
 };
