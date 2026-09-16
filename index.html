@@ -1297,8 +1297,13 @@
       data-action="toggle-sidebar"
     ></div>
 
-    <!-- Espaçador para desktop -->
-    <div class="hidden lg:block w-20 flex-shrink-0 z-0"></div>
+    <!-- Espaçador para desktop: acompanha a largura da sidebar (inclusive no
+         hover) para o conteúdo ser empurrado, não coberto, já que a sidebar
+         é fixed e não participa do fluxo do flexbox. -->
+    <div
+      id="sidebar-spacer"
+      class="hidden lg:block w-20 flex-shrink-0 z-0"
+    ></div>
 
     <!-- Barra lateral -->
     <aside

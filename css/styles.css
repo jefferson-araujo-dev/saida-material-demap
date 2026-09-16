@@ -345,6 +345,18 @@
         }
       }
 
+      /* A sidebar é fixed (não participa do fluxo do flexbox), então o
+         espaçador precisa crescer junto com ela no hover para empurrar o
+         conteúdo em vez de deixá-lo coberto/cortado atrás da sidebar. */
+      @media (min-width: 1024px) {
+        #sidebar-spacer {
+          transition: width 300ms ease-in-out;
+        }
+        body:has(#sidebar:hover) #sidebar-spacer {
+          width: 18rem;
+        }
+      }
+
       @media (max-width: 640px) {
         .glass-card,
         .panel-card {
