@@ -65,7 +65,16 @@ describe("normalizarQuantidade", () => {
 
 describe("normalizarStatus", () => {
   it("reconhece variações de 'concluído' como Sim", () => {
-    for (const v of ["1", "sim", "s", "yes", "true", "baixado", "concluido", "concluído"]) {
+    for (const v of [
+      "1",
+      "sim",
+      "s",
+      "yes",
+      "true",
+      "baixado",
+      "concluido",
+      "concluído",
+    ]) {
       expect(normalizarStatus(v)).toBe("Sim");
     }
   });

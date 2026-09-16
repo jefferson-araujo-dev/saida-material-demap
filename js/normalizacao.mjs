@@ -24,7 +24,7 @@ export const normalizarData = (value) => {
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
 
-  const partes = texto.split(/[\/\-]/).filter(Boolean);
+  const partes = texto.split(/[/-]/).filter(Boolean);
   if (partes.length === 3) {
     const [a, b, c] = partes;
     // Quando o primeiro token não é o ano (4 dígitos), assume-se o padrão

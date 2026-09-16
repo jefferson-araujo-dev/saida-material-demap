@@ -26,9 +26,8 @@ vi.mock("firebase/firestore", () => ({
   updateDoc: vi.fn(async () => {}),
 }));
 
-const { salvarLancamentosEmLote, alternarBaixaNoFirestore } = await import(
-  "./database.js"
-);
+const { salvarLancamentosEmLote, alternarBaixaNoFirestore } =
+  await import("./database.js");
 
 beforeEach(() => {
   commits.length = 0;
