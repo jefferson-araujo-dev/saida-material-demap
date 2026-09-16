@@ -23,13 +23,22 @@ export const normalizarData = (value) => {
   const partes = texto.split(/[\/\-]/).filter(Boolean);
   if (partes.length === 3) {
     const [a, b, c] = partes;
-    const possivelData = new Date(
-      Number(a.length === 4 ? a : c),
-      Number(a.length === 4 ? Number(b) - 1 : Number(a) - 1),
-      Number(a.length === 4 ? Number(c) : Number(b)),
-    );
+    // Quando o primeiro token não é o ano (4 dígitos), assume-se o padrão
+    // brasileiro DD/MM/AAAA — não MM/DD/AAAA (formato dos EUA).
+    const ano = Number(a.length === 4 ? a : c);
+    const mes = Number(b) - 1;
+    const dia = Number(a.length === 4 ? c : a);
+    const possivelData = new Date(ano, mes, dia);
 
-    if (!Number.isNaN(possivelData.getTime())) {
+    // new Date() "rola" dias/meses inválidos (ex.: 30/02) para o mês
+    // seguinte em vez de falhar; conferimos os componentes de volta para
+    // rejeitar datas que na verdade não existem.
+    if (
+      !Number.isNaN(possivelData.getTime()) &&
+      possivelData.getFullYear() === ano &&
+      possivelData.getMonth() === mes &&
+      possivelData.getDate() === dia
+    ) {
       return formatarDataLocal(possivelData);
     }
   }

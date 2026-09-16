@@ -909,18 +909,23 @@ const confirmarModalPrompt = async () => {
       encarregados.push(novoNome);
       renderizarSelectEncarregados();
       document.getElementById("select-encarregado").value = novoNome;
-      showToast(`Encarregado "${novoNome}" adicionado!`, "success");
-      criarNotificacao(
-        "Novo Responsável",
-        `O encarregado "${novoNome}" foi adicionado.`,
-        "info",
-      );
       fecharModalPrompt();
 
-      // Salvar na nuvem (Firestore)
+      // Salvar na nuvem (Firestore). Se falhar, desfaz a adição local para
+      // não deixar o usuário achando que foi salvo quando não foi.
       try {
         await salvarEncarregadoNoFirestore(novoNome);
-      } catch (e) {}
+        showToast(`Encarregado "${novoNome}" adicionado!`, "success");
+        criarNotificacao(
+          "Novo Responsável",
+          `O encarregado "${novoNome}" foi adicionado.`,
+          "info",
+        );
+      } catch (e) {
+        encarregados = encarregados.filter((nome) => nome !== novoNome);
+        renderizarSelectEncarregados();
+        mostrarErroFirebase(e, "Não foi possível salvar o encarregado.");
+      }
     } else {
       showToast("Este encarregado já existe.", "error");
     }
@@ -1333,7 +1338,8 @@ document
           if (
             lancamento.codigo &&
             lancamento.quantidade > 0 &&
-            lancamento.data
+            lancamento.data &&
+            lancamento.encarregado
           ) {
             lancamentosFormatados.push(lancamento);
           }
@@ -1915,8 +1921,17 @@ function atualizarDashboard() {
     encSet.add(i.encarregado);
     matSet.add(i.codigo);
     volEnc[i.encarregado] = (volEnc[i.encarregado] || 0) + Number(i.quantidade);
-    let matDesc = i.material.substring(0, 30) + "...";
-    topMat[matDesc] = (topMat[matDesc] || 0) + Number(i.quantidade);
+    const materialNome = i.material || "";
+    const matDesc =
+      materialNome.length > 30
+        ? materialNome.substring(0, 30) + "..."
+        : materialNome;
+    // Agrupa pelo nome completo (não pelo rótulo truncado) para não somar
+    // materiais distintos que só compartilham o mesmo prefixo de 30 caracteres.
+    if (!topMat[materialNome]) {
+      topMat[materialNome] = { label: matDesc, vol: 0 };
+    }
+    topMat[materialNome].vol += Number(i.quantidade);
 
     const dataItem = parseDataFiltro(i.data);
     if (dataItem) {
@@ -1948,8 +1963,8 @@ function atualizarDashboard() {
     .map((k) => ({ nome: k, vol: volEnc[k] }))
     .sort((a, b) => b.vol - a.vol)
     .slice(0, 10);
-  let aMat = Object.keys(topMat)
-    .map((k) => ({ nome: k, vol: topMat[k] }))
+  let aMat = Object.values(topMat)
+    .map((v) => ({ nome: v.label, vol: v.vol }))
     .sort((a, b) => b.vol - a.vol)
     .slice(0, 5);
 
