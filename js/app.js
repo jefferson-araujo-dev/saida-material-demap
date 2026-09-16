@@ -35,15 +35,6 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from "chart.js";
 import * as XLSX from "xlsx";
 import {
   normalizarData,
@@ -51,14 +42,25 @@ import {
   normalizarTexto,
 } from "./normalizacao.mjs";
 
-Chart.register(
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-);
+// Chart.js é carregado sob demanda (dynamic import) na primeira renderização
+// do dashboard, para não pesar no bundle inicial de quem só usa Lançamentos.
+let ChartPromise = null;
+function carregarChart() {
+  if (!ChartPromise) {
+    ChartPromise = import("chart.js").then((mod) => {
+      mod.Chart.register(
+        mod.BarController,
+        mod.BarElement,
+        mod.CategoryScale,
+        mod.LinearScale,
+        mod.Tooltip,
+        mod.Legend,
+      );
+      return mod.Chart;
+    });
+  }
+  return ChartPromise;
+}
 
 // ==========================================
 // 0. ESTADO GLOBAL E UTILITÁRIOS DE INTERFACE
@@ -1944,7 +1946,8 @@ function atualizarDashboard() {
   }
 }
 
-function renderizarGraficos(dEnc, dMat) {
+async function renderizarGraficos(dEnc, dMat) {
+  const Chart = await carregarChart();
   Chart.defaults.font.family = "'Inter', sans-serif";
   const canvasEnc = document.getElementById("chartEncarregados");
   const canvasMat = document.getElementById("chartMateriais");
