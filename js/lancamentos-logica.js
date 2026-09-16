@@ -32,7 +32,11 @@ export function filtrarLancamentos(itens, filtros = {}) {
       contemTermo(item.encarregado);
 
     const matchEncarregado = !encarregado || item.encarregado === encarregado;
-    const matchStatus = !status || (item.baixa || "Não") === status;
+    const matchStatus =
+      !status ||
+      (status === "Cancelado"
+        ? item.deleted === true
+        : item.deleted !== true && (item.baixa || "Não") === status);
 
     let matchData = true;
     if (dataInicio || dataFim) {
@@ -55,7 +59,7 @@ export function filtrarLancamentos(itens, filtros = {}) {
 export function agruparLancamentos(itens) {
   const agrupados = {};
   itens.forEach((item) => {
-    const key = `${item.data}_${item.codigo}_${item.encarregado}_${item.baixa || "Não"}`;
+    const key = `${item.data}_${item.codigo}_${item.encarregado}_${item.baixa || "Não"}_${item.deleted === true ? "cancelado" : "ativo"}`;
     if (!agrupados[key]) {
       agrupados[key] = {
         ...item,

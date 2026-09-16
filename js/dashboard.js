@@ -100,7 +100,11 @@ export function atualizarDashboard() {
   let resumo7d = 0;
   let resumo30d = 0;
   let resumoMes = 0;
-  state.dadosAtuais.forEach((i) => {
+  // Lançamentos cancelados permanecem em state.dadosAtuais (para aparecerem
+  // no histórico), mas não devem contar nos indicadores/gráficos do painel.
+  state.dadosAtuais
+    .filter((i) => i.deleted !== true)
+    .forEach((i) => {
     total += Number(i.quantidade);
     encSet.add(i.encarregado);
     matSet.add(i.codigo);

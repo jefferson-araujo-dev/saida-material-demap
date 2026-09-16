@@ -8,6 +8,7 @@ rules_version = '2';
 //   /artifacts/{appId}/materiais/{codigo}
 //   /artifacts/{appId}/materiais_meta/{doc}
 //   /artifacts/{appId}/encarregados/{nome}
+//   /artifacts/{appId}/auditoria/{id}
 //
 // A checagem de administrador usa a Custom Claim `admin: true` no token,
 // definida pelo Firebase Admin SDK (ver README). O mesmo critério é usado no
@@ -38,8 +39,12 @@ service cloud.firestore {
           && request.resource.data.quantidade > 0
           && request.resource.data.codigo is string
           && request.resource.data.deleted == false;
-        // Edição, baixa e soft-delete (nunca hard-delete pelo cliente).
+        // Edição, baixa e cancelamento (soft-delete; nunca hard-delete pelo
+        // cliente). Um lançamento já cancelado (`deleted == true`) fica
+        // congelado: nenhuma nova edição é aceita, o que também impede
+        // reverter `deleted` de volta para `false` por essa via.
         allow update: if isOwner(uid)
+          && resource.data.deleted != true
           && request.resource.data.quantidade is number
           && request.resource.data.quantidade > 0
           && request.resource.data.codigo is string;
@@ -67,6 +72,24 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
         allow update, delete: if isAdmin();
+      }
+
+      // ---- Auditoria: qualquer autenticado registra a própria ação;
+      // ninguém edita ou apaga; só admin lê a trilha completa.
+      match /auditoria/{registroId} {
+        allow read: if isAdmin();
+        allow create: if isSignedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.acao is string
+          && request.resource.data.acao.size() > 0
+          && request.resource.data.acao.size() <= 60
+          && request.resource.data.entidade is string
+          && request.resource.data.entidade.size() > 0
+          && request.resource.data.entidade.size() <= 60
+          && request.resource.data.timestamp == request.time
+          && request.resource.data.metadados is map
+          && request.resource.data.metadados.size() <= 20;
+        allow update, delete: if false;
       }
     }
 

@@ -74,6 +74,33 @@ describe("filtrarLancamentos", () => {
     });
     expect(resultado.map((i) => i.id)).toEqual(["2"]);
   });
+
+  it("sem filtro de status, mantém lançamentos cancelados visíveis (histórico não some)", () => {
+    const itens = [
+      itemBase({ id: "1" }),
+      itemBase({ id: "2", deleted: true, status: "cancelado" }),
+    ];
+    const resultado = filtrarLancamentos(itens, {});
+    expect(resultado.map((i) => i.id).sort()).toEqual(["1", "2"]);
+  });
+
+  it("filtro 'Cancelado' retorna só os lançamentos cancelados", () => {
+    const itens = [
+      itemBase({ id: "1" }),
+      itemBase({ id: "2", deleted: true }),
+    ];
+    const resultado = filtrarLancamentos(itens, { status: "Cancelado" });
+    expect(resultado.map((i) => i.id)).toEqual(["2"]);
+  });
+
+  it("filtros de status 'Não'/'Sim' excluem lançamentos cancelados", () => {
+    const itens = [
+      itemBase({ id: "1", baixa: "Não" }),
+      itemBase({ id: "2", baixa: "Não", deleted: true }),
+    ];
+    const resultado = filtrarLancamentos(itens, { status: "Não" });
+    expect(resultado.map((i) => i.id)).toEqual(["1"]);
+  });
 });
 
 describe("agruparLancamentos", () => {
@@ -105,6 +132,15 @@ describe("agruparLancamentos", () => {
       itemBase({ id: "2", baixa: "Não" }),
     ];
     expect(agruparLancamentos(itens)).toHaveLength(1);
+  });
+
+  it("não agrupa lançamento cancelado com um ativo de mesma chave", () => {
+    const itens = [
+      itemBase({ id: "1" }),
+      itemBase({ id: "2", deleted: true }),
+    ];
+    const resultado = agruparLancamentos(itens);
+    expect(resultado).toHaveLength(2);
   });
 });
 

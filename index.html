@@ -886,7 +886,7 @@
             Entrar como Visitante
           </button>
           <p class="text-[10px] font-medium text-slate-400">
-            Protegido por criptografia de ponta a ponta.
+            Conexão protegida por HTTPS e autenticação segura via Firebase.
           </p>
         </div>
       </div>
@@ -944,7 +944,7 @@
       id="modal-prompt"
       role="dialog"
       aria-modal="true"
-      aria-label="Novo Encarregado"
+      aria-label="Novo Responsável"
       class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center transition-opacity opacity-0 duration-300"
     >
       <div
@@ -960,7 +960,7 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-slate-800">Novo Encarregado</h3>
+            <h3 class="text-lg font-bold text-slate-800">Novo Responsável</h3>
             <p class="text-sm text-slate-500 mt-1">
               Cadastre um novo responsável no sistema.
             </p>
@@ -1606,7 +1606,7 @@
                   <p
                     class="text-xs sm:text-sm text-slate-500 font-bold mb-1 truncate uppercase tracking-wider"
                   >
-                    Total Saídas
+                    Unidades Movimentadas
                   </p>
                   <h3
                     id="card-total-saidas"
@@ -1630,7 +1630,7 @@
                   <p
                     class="text-xs sm:text-sm text-slate-500 font-bold mb-1 truncate uppercase tracking-wider"
                   >
-                    Encarregados
+                    Responsáveis Atendidos
                   </p>
                   <h3
                     id="card-total-encarregados"
@@ -1674,7 +1674,7 @@
                   <h3
                     class="text-base sm:text-lg font-extrabold text-slate-800 truncate pr-2"
                   >
-                    Volume por Encarregado
+                    Volume por Responsável
                   </h3>
                   <span
                     class="text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-600 py-1.5 px-3 rounded-lg whitespace-nowrap border border-slate-200"
@@ -1687,7 +1687,7 @@
                   <canvas
                     id="chartEncarregados"
                     role="img"
-                    aria-label="Gráfico de barras: volume de saídas por encarregado"
+                    aria-label="Gráfico de barras: volume de saídas por responsável"
                     class="absolute inset-0 z-10"
                   ></canvas>
                   <div
@@ -1853,7 +1853,7 @@
                   <div class="col-span-1 md:col-span-4">
                     <label
                       class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
-                      >Responsável (Encarregado)</label
+                      >Responsável</label
                     >
                     <div class="flex flex-col sm:flex-row items-stretch gap-2">
                       <select
@@ -1954,6 +1954,7 @@
                     <option value="">Todos os status</option>
                     <option value="Não">Pendentes</option>
                     <option value="Sim">Concluídos</option>
+                    <option value="Cancelado">Cancelados</option>
                   </select>
                 </div>
                 <div
@@ -1997,7 +1998,7 @@
                     <option value="data_asc">Mais antigos</option>
                     <option value="material_asc">Material (A-Z)</option>
                     <option value="quantidade_desc">Maior qtd.</option>
-                    <option value="encarregado_asc">Encarregado (A-Z)</option>
+                    <option value="encarregado_asc">Responsável (A-Z)</option>
                   </select>
                 </div>
 

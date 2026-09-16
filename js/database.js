@@ -14,7 +14,40 @@ import {
   query,
   orderBy,
   limit,
+  arrayUnion,
 } from "firebase/firestore";
+
+// ==========================================
+// AUDITORIA
+// ==========================================
+// Trilha de auditoria mínima: quem fez o quê, em qual entidade, quando.
+// Nunca registrar senhas/tokens/credenciais nos metadados.
+export const registrarAuditoria = async (
+  uid,
+  acao,
+  entidade,
+  entidadeId,
+  usuario,
+  usuarioUid,
+  metadados = {},
+) => {
+  try {
+    const ref = collection(db, "artifacts", appId, "auditoria");
+    await addDoc(ref, {
+      uid,
+      acao,
+      entidade,
+      entidadeId: entidadeId ?? null,
+      usuario: usuario ?? null,
+      usuarioUid: usuarioUid ?? null,
+      metadados,
+      timestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    // Falha ao auditar não deve bloquear a operação principal.
+    console.error("Erro ao registrar auditoria", error);
+  }
+};
 
 // ==========================================
 // NOTIFICAÇÕES
@@ -134,12 +167,18 @@ export const adicionarLancamentoNoFirestore = async (
   });
 };
 
-// Renomeada para softDeletarLancamentoNoFirestore para exclusão lógica
+// Cancelamento de lançamento (nunca hard-delete pelo cliente — ver
+// firestore.rules `allow delete: if false`). O documento original permanece
+// no Firestore; apenas é marcado como cancelado. Mantém os campos
+// `deleted`/`deletedAt`/`deletedBy`/`deletedByUid` por compatibilidade com o
+// filtro já existente, e adiciona `status`/`motivoCancelamento`/
+// `canceladoPor`/`canceladoEm` para deixar a trilha explícita.
 export const softDeletarLancamentoNoFirestore = async (
   uid,
   docId,
   deletedBy,
   deletedByUid,
+  motivoCancelamento = null,
 ) => {
   const docRef = doc(
     db,
@@ -155,6 +194,11 @@ export const softDeletarLancamentoNoFirestore = async (
     deletedAt: serverTimestamp(),
     deletedBy: deletedBy,
     deletedByUid: deletedByUid,
+    status: "cancelado",
+    motivoCancelamento: motivoCancelamento || null,
+    canceladoPor: deletedBy,
+    canceladoPorUid: deletedByUid,
+    canceladoEm: serverTimestamp(),
     lastModifiedAt: serverTimestamp(), // Atualiza o timestamp de modificação
     lastModifiedBy: deletedBy,
     lastModifiedByUid: deletedByUid,
@@ -180,12 +224,40 @@ export const atualizarLancamentoNoFirestore = async (
     docId,
   );
 
-  await updateDoc(docRef, {
+  // Registra o antes/depois dos campos alterados em `historicoEdicoes` para
+  // manter rastreabilidade — a edição nunca sobrescreve silenciosamente.
+  const snapAntes = await getDoc(docRef);
+  const dadosAntes = snapAntes.exists() ? snapAntes.data() : {};
+  const camposAlterados = Object.keys(novosDados).filter(
+    (campo) => dadosAntes[campo] !== novosDados[campo],
+  );
+
+  const updatePayload = {
     ...novosDados,
     lastModifiedAt: serverTimestamp(),
     lastModifiedBy: modifiedBy,
     lastModifiedByUid: modifiedByUid,
-  });
+  };
+
+  if (camposAlterados.length > 0) {
+    updatePayload.historicoEdicoes = arrayUnion({
+      campos: camposAlterados,
+      valoresAnteriores: Object.fromEntries(
+        camposAlterados.map((c) => [c, dadosAntes[c] ?? null]),
+      ),
+      valoresNovos: Object.fromEntries(
+        camposAlterados.map((c) => [c, novosDados[c]]),
+      ),
+      modificadoPor: modifiedBy,
+      modificadoPorUid: modifiedByUid,
+      // serverTimestamp() não é permitido dentro de arrayUnion; usa hora do
+      // cliente só para este registro histórico (lastModifiedAt acima é a
+      // fonte confiável de quando a edição ocorreu no servidor).
+      modificadoEm: new Date().toISOString(),
+    });
+  }
+
+  await updateDoc(docRef, updatePayload);
 };
 
 export const alternarBaixaNoFirestore = async (

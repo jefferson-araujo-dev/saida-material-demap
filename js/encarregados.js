@@ -5,6 +5,7 @@ import {
   salvarEncarregadoNoFirestore,
   removerEncarregadoNoFirestore,
   escutarEncarregados,
+  registrarAuditoria,
 } from "./database.js";
 import { showToast } from "./ui.js";
 import { state } from "./state.js";
@@ -24,7 +25,7 @@ export function renderizarSelectEncarregados() {
   if (select)
     select.innerHTML = '<option value="">Selecione o responsável...</option>';
   if (filtroSelect)
-    filtroSelect.innerHTML = '<option value="">Todos os encarregados</option>';
+    filtroSelect.innerHTML = '<option value="">Todos os responsáveis</option>';
 
   [...encarregados].sort().forEach((nome) => {
     if (select) select.add(new Option(nome, nome));
@@ -65,19 +66,29 @@ export const confirmarModalPrompt = async () => {
       // não deixar o usuário achando que foi salvo quando não foi.
       try {
         await salvarEncarregadoNoFirestore(novoNome);
-        showToast(`Encarregado "${novoNome}" adicionado!`, "success");
+        showToast(`Responsável "${novoNome}" adicionado!`, "success");
         criarNotificacao(
           "Novo Responsável",
-          `O encarregado "${novoNome}" foi adicionado.`,
+          `O responsável "${novoNome}" foi adicionado.`,
           "info",
         );
+        if (state.currentUser) {
+          registrarAuditoria(
+            state.currentUser.uid,
+            "cadastro_responsavel",
+            "encarregado",
+            novoNome,
+            state.currentUser.displayName,
+            state.currentUser.uid,
+          );
+        }
       } catch (e) {
         encarregados = encarregados.filter((nome) => nome !== novoNome);
         renderizarSelectEncarregados();
         mostrarErroFirebase(e, "Não foi possível salvar o encarregado.");
       }
     } else {
-      showToast("Este encarregado já existe.", "error");
+      showToast("Este responsável já existe.", "error");
     }
   } else {
     input.focus();
@@ -87,29 +98,39 @@ export const confirmarModalPrompt = async () => {
 export const removerEncarregadoSelecionado = () => {
   if (!state.isAdmin) {
     return showToast(
-      "Apenas o administrador pode remover encarregados.",
+      "Apenas o administrador pode remover responsáveis.",
       "error",
     );
   }
   const select = document.getElementById("select-encarregado");
   const encarregado = select.value;
   if (!encarregado) {
-    showToast("Selecione um encarregado para remover.", "error");
+    showToast("Selecione um responsável para remover.", "error");
     return;
   }
 
   abrirModalConfirmacao(
-    "Excluir Encarregado",
-    `Tem certeza que deseja remover o encarregado "${encarregado}"?`,
+    "Excluir Responsável",
+    `Tem certeza que deseja remover o responsável "${encarregado}"?`,
     async () => {
       try {
         await removerEncarregadoNoFirestore(encarregado);
         showToast(
-          `Encarregado "${encarregado}" removido com sucesso.`,
+          `Responsável "${encarregado}" removido com sucesso.`,
           "success",
         );
+        if (state.currentUser) {
+          registrarAuditoria(
+            state.currentUser.uid,
+            "remocao_responsavel",
+            "encarregado",
+            encarregado,
+            state.currentUser.displayName,
+            state.currentUser.uid,
+          );
+        }
       } catch {
-        showToast("Erro ao remover encarregado.", "error");
+        showToast("Erro ao remover responsável.", "error");
       }
     },
     "Excluir",

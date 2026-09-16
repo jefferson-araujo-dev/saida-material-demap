@@ -3,12 +3,13 @@
 // ==========================================
 import {
   adicionarLancamentoNoFirestore,
-  softDeletarLancamentoNoFirestore, // Renomeado para soft-delete
+  softDeletarLancamentoNoFirestore, // Cancelamento (soft-delete)
   atualizarLancamentoNoFirestore,
   alternarBaixaNoFirestore,
   salvarLancamentosEmLote,
   escutarLancamentos,
   LIMITE_LANCAMENTOS_PADRAO,
+  registrarAuditoria,
 } from "./database.js";
 import { svgIcon, showToast, escapeHTML, toggleDropdown } from "./ui.js";
 import { state } from "./state.js";
@@ -236,6 +237,15 @@ export const salvarEdicao = async () => {
       state.currentUser.uid,
     );
     showToast("Lançamento atualizado com sucesso!", "success");
+    registrarAuditoria(
+      state.currentUser.uid,
+      "correcao_lancamento",
+      "lancamento",
+      id,
+      state.currentUser.displayName,
+      state.currentUser.uid,
+      { camposAlterados: Object.keys(novosDados) },
+    );
     fecharModalEdicao();
   } catch (error) {
     mostrarErroFirebase(error, "Erro ao salvar as alterações.");
@@ -526,6 +536,15 @@ document
         `Material: ${material} | Qtd: ${qtdNotif}`,
         "success",
       );
+      registrarAuditoria(
+        state.currentUser.uid,
+        "criacao_lancamento",
+        "lancamento",
+        null,
+        state.currentUser.displayName,
+        state.currentUser.uid,
+        { codigo, quantidade, encarregado },
+      );
     } catch (error) {
       console.error(error);
       showToast("Erro no servidor. Tente novamente em instantes.", "error");
@@ -538,25 +557,50 @@ document
 export const deletarLancamento = (docId) => {
   if (!state.currentUser) return;
   if (!state.isAdmin) {
-    return showToast("Apenas o administrador pode excluir registros.", "error");
+    return showToast(
+      "Apenas o administrador pode cancelar registros.",
+      "error",
+    );
   }
   abrirModalConfirmacao(
-    "Excluir Registro",
-    "Atenção: Esta ação removerá a saída do banco de dados permanentemente.",
+    "Cancelar Registro",
+    "O lançamento será marcado como cancelado e continuará visível no histórico (nenhum dado é removido do banco).",
     async () => {
+      // Motivo é opcional: não há campo dedicado no modal de confirmação
+      // (fora de escopo alterar sua estrutura agora), mas a razão pode ser
+      // capturada quando disponível.
+      let motivo = null;
+      try {
+        motivo = window.prompt(
+          "Motivo do cancelamento (opcional):",
+          "",
+        );
+      } catch {
+        motivo = null;
+      }
       try {
         await softDeletarLancamentoNoFirestore(
           state.currentUser.uid,
           docId,
           state.currentUser.displayName,
           state.currentUser.uid,
-        ); // Soft-delete
-        showToast("Registro apagado.", "success");
+          motivo && motivo.trim() ? motivo.trim() : null,
+        );
+        showToast("Registro cancelado.", "success");
+        registrarAuditoria(
+          state.currentUser.uid,
+          "cancelamento_lancamento",
+          "lancamento",
+          docId,
+          state.currentUser.displayName,
+          state.currentUser.uid,
+          { motivo: motivo && motivo.trim() ? motivo.trim() : null },
+        );
       } catch (error) {
-        mostrarErroFirebase(error, "Erro ao excluir o registro.");
+        mostrarErroFirebase(error, "Erro ao cancelar o registro.");
       }
     },
-    "Excluir",
+    "Cancelar Registro",
   );
 };
 
@@ -595,8 +639,9 @@ export function iniciarEscutaDeDados() {
       if (!snapshot.empty)
         snapshot.forEach((doc) => {
           const dados = doc.data();
-          // Filtro de soft-delete aplicado no cliente (ver database.js)
-          if (dados.deleted === true) return;
+          // Lançamentos cancelados (soft-delete) permanecem no histórico,
+          // marcados como "Cancelado" na grade (ver renderizarGridLancamentos),
+          // em vez de serem removidos da visualização.
           state.dadosAtuais.push({ ...dados, id: doc.id });
         });
       isLoadingTabela = false;
@@ -778,8 +823,12 @@ function renderizarGridLancamentos() {
   dadosFiltrados.slice(start, end).forEach((item) => {
     const dataBR = formatarDataParaDisplay(item.data);
     const baixaAtual = item.baixa || "Não";
-    const borderColor =
-      baixaAtual === "Sim" ? "border-t-emerald-500" : "border-t-amber-500";
+    const cancelado = item.deleted === true;
+    const borderColor = cancelado
+      ? "border-t-slate-300"
+      : baixaAtual === "Sim"
+        ? "border-t-emerald-500"
+        : "border-t-amber-500";
 
     const materialSeguro = escapeHTML(item.material);
     const encarregadoSeguro = escapeHTML(item.encarregado);
@@ -797,7 +846,7 @@ function renderizarGridLancamentos() {
         : `<button data-action="toggle-baixa" data-id="${idBaixa}" data-status="Não" class="${btnClasses} bg-amber-50 hover:bg-amber-100 text-amber-700">${svgIcon("clock", "w-4 h-4")} Pendente</button>`;
 
     itensHTML += `
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 border-t-4 ${borderColor} p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 border-t-4 ${borderColor} p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${cancelado ? "opacity-60" : ""}">
                         <div class="flex justify-between items-start mb-4">
                             <div class="bg-slate-100/80 px-2.5 py-1 rounded-md text-[10px] font-bold text-slate-500 tracking-widest border border-slate-200">
                                 CÓD: ${escapeHTML(item.codigo)}
@@ -806,6 +855,7 @@ function renderizarGridLancamentos() {
                                 ${svgIcon("calendar", "w-4 h-4")} ${dataBR}
                             </div>
                         </div>
+                        ${cancelado ? `<div class="mb-2 inline-flex w-fit items-center gap-1 bg-red-50 text-red-600 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide" title="${item.motivoCancelamento ? escapeHTML(item.motivoCancelamento) : "Cancelado"}">Cancelado</div>` : ""}
                         <h3 class="font-black text-slate-800 text-base leading-tight line-clamp-2 mb-4" title="${materialSeguro}">${materialSeguro}</h3>
 
                         <div class="flex items-center gap-3 sm:gap-4 bg-slate-50/50 rounded-xl p-3 border border-slate-100 mb-4">
@@ -821,16 +871,18 @@ function renderizarGridLancamentos() {
                         </div>
 
                         <div class="mt-auto flex gap-2 pt-2 border-t border-slate-100">
-                            ${btnBaixa}
+                            ${cancelado ? "" : btnBaixa}
                             ${
-                              item.isGrouped
-                                ? `<div class="w-16 flex-shrink-0 py-2.5 bg-brand-50 text-brand-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">${svgIcon("layer", "w-4 h-4")} ${item.ids.length}x</div>`
-                                : state.isAdmin
-                                  ? `
+                              cancelado
+                                ? `<div class="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-slate-50 text-slate-400 cursor-not-allowed" title="Registro cancelado — sem ações disponíveis">Sem ações</div>`
+                                : item.isGrouped
+                                  ? `<div class="w-16 flex-shrink-0 py-2.5 bg-brand-50 text-brand-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">${svgIcon("layer", "w-4 h-4")} ${item.ids.length}x</div>`
+                                  : state.isAdmin
+                                    ? `
                                   <button data-action="abrir-modal-edicao" data-id="${item.id}" class="w-12 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-brand-50 text-slate-400 hover:text-brand-600 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Editar Registro"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12.828 15H10v-2.828l8.586-8.586z"></path></svg></button>
-                                  <button data-action="deletar-lancamento" data-id="${item.id}" class="w-12 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Excluir Registro">${svgIcon("trash", "w-4 h-4")}</button>
+                                  <button data-action="deletar-lancamento" data-id="${item.id}" class="w-12 flex-shrink-0 py-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors flex items-center justify-center shadow-sm" title="Cancelar Registro">${svgIcon("trash", "w-4 h-4")}</button>
                                   `
-                                  : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para editar/excluir">${svgIcon("trash", "w-4 h-4")}</div>`
+                                    : `<div class="w-16 flex-shrink-0 py-2.5 bg-slate-50 text-slate-300 rounded-xl transition-colors flex items-center justify-center shadow-sm cursor-not-allowed" title="Sem permissão para editar/cancelar">${svgIcon("trash", "w-4 h-4")}</div>`
                             }
                         </div>
                     </div>`;
