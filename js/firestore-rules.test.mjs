@@ -3,14 +3,15 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-// Verificação ESTÁTICA de firestore.rules (regex sobre o texto das regras).
-// O Firebase Emulator (firestore) não pôde ser executado neste ambiente por
-// falta de JDK 21+ (firebase-tools exige Java >= 21). Estes testes NÃO
-// substituem uma avaliação real das regras contra o motor do Firestore —
-// eles apenas garantem que as cláusulas de segurança esperadas continuam
-// presentes no texto do arquivo, servindo de guarda contra regressão
-// acidental. Testes reais com @firebase/rules-unit-testing ficam como
-// pendência registrada no REVIEW.
+// Verificação ESTÁTICA e rápida de firestore.rules (regex sobre o texto das
+// regras). Serve de guarda contra regressão acidental no texto do arquivo,
+// mas NÃO avalia as regras pelo motor do Firestore — não substitui uma
+// validação real de permissões.
+//
+// A suíte autoritativa, que executa os cenários de allow/deny pelo motor
+// real do Firestore Emulator (via @firebase/rules-unit-testing), está em
+// js/firestore-rules.emulator.test.mjs. Para validar permissões, use aquela
+// suíte (npm run test:rules:emulator, com o emulator ativo).
 
 const rulesPath = join(
   dirname(fileURLToPath(import.meta.url)),
